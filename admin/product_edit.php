@@ -81,39 +81,11 @@ if (is_post()) {
         $errors['stock'] = 'Stock must be a non-negative whole number (0 or higher).';
     }
 
-    // 2. Optional Photo Replacement
-    $new_photo_filename = null;
-    if (isset($_FILES['photo']) && $_FILES['photo']['error'] !== UPLOAD_ERR_NO_FILE) {
-        if ($_FILES['photo']['error'] !== UPLOAD_ERR_OK) {
-            $errors['photo'] = 'Upload error (Code: ' . $_FILES['photo']['error'] . ').';
-        } else {
-            $file = $_FILES['photo'];
-            $max_size = 2 * 1024 * 1024;
-            $allowed_exts  = ['jpg', 'jpeg', 'png', 'webp'];
-            $allowed_mimes = ['image/jpeg', 'image/png', 'image/webp'];
-
-            $file_ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-
-            if ($file['size'] > $max_size) {
-                $errors['photo'] = 'Image size cannot exceed 2 MB.';
-            } elseif (!in_array($file_ext, $allowed_exts, true)) {
-                $errors['photo'] = 'Allowed formats: JPG, JPEG, PNG, WEBP.';
-            } else {
-                $finfo = finfo_open(FILEINFO_MIME_TYPE);
-                $mime_type = finfo_file($finfo, $file['tmp_name']);
-                finfo_close($finfo);
-
-                if (!in_array($mime_type, $allowed_mimes, true)) {
-                    $errors['photo'] = 'Invalid image content detected.';
-                } else {
-                    $new_photo_filename = 'sumthin_' . bin2hex(random_bytes(8)) . '.' . $file_ext;
-                    $dest = __DIR__ . '/../uploads/products/' . $new_photo_filename;
-                    if (!move_uploaded_file($file['tmp_name'], $dest)) {
-                        $errors['photo'] = 'Failed to save new photo to disk.';
-                    }
-                }
-            }
-        }
+    // 2. Optional Photo Replacement using reusable helper
+    $photo_err = null;
+    $new_photo_filename = save_uploaded_image('photo', 'products', 'sumthin', $photo_err, 2);
+    if ($photo_err) {
+        $errors['photo'] = $photo_err;
     }
 
     // 3. Database Update if Valid
@@ -149,12 +121,7 @@ if (is_post()) {
                     $p_update->execute([$new_photo_filename, $existing_photo_row->id]);
 
                     // Remove old custom photo file if it exists and isn't default
-                    if ($existing_photo_row->photo_url && !str_starts_with($existing_photo_row->photo_url, 'default')) {
-                        $old_path = __DIR__ . '/../uploads/products/' . $existing_photo_row->photo_url;
-                        if (file_exists($old_path)) {
-                            unlink($old_path);
-                        }
-                    }
+                    delete_uploaded_image('products', $existing_photo_row->photo_url);
                 } else {
                     $p_ins = $db->prepare('INSERT INTO `product_photo` (`product_id`, `photo_url`, `is_primary`, `sort_order`) VALUES (?, ?, 1, 1)');
                     $p_ins->execute([$id, $new_photo_filename]);
@@ -167,7 +134,7 @@ if (is_post()) {
             redirect(base_url('admin/products.php'));
         } catch (Exception $e) {
             $db->rollBack();
-            $errors['db'] = 'Failed to update product: ' . $e->getMessage();
+            $errors['db'] = app_error_message('Failed to update product. Please try again.', $e);
         }
     }
 }

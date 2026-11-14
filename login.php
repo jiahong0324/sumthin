@@ -62,15 +62,21 @@ if (is_post()) {
                 unset($user->password_hash);
                 $_SESSION['user'] = $user;
 
-                // d. Handle Remember Me token (optional convenience)
+                // d. Handle Remember Me token (Store SHA-256 hash in DB, raw in cookie)
                 if ($remember_me) {
-                    $token = bin2hex(random_bytes(32));
+                    $token      = bin2hex(random_bytes(32));
+                    $token_hash = hash('sha256', $token);
                     $update_tok = $db->prepare('UPDATE `user` SET `remember_token` = ? WHERE `id` = ?');
-                    $update_tok->execute([$token, $user->id]);
+                    $update_tok->execute([$token_hash, $user->id]);
+
+                    $is_https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') 
+                             || (isset($_SERVER['SERVER_PORT']) && (int)$_SERVER['SERVER_PORT'] === 443);
+
                     setcookie('sumthin_remember', $token, [
                         'expires'  => time() + (30 * 86400), // 30 days
                         'path'     => '/',
                         'httponly' => true,
+                        'secure'   => $is_https,
                         'samesite' => 'Lax'
                     ]);
                 }
@@ -167,25 +173,6 @@ require_once __DIR__ . '/_head.php';
             <!-- Submit Button -->
             <button type="submit" class="btn btn-primary btn-block">Sign In</button>
         </form>
-
-        <!-- Quick Demo Credentials for Lecturer Evaluation -->
-        <div class="demo-credentials-box">
-            <div class="demo-credentials-title">
-                <span>🔑</span> Quick Demo Credentials (Click to fill)
-            </div>
-            <ul class="demo-credentials-list">
-                <li>
-                    <strong>Admin:</strong> 
-                    <a href="#" class="form-link btn-fill-demo" data-email="admin@sumthin.com" data-password="Admin123!">admin@sumthin.com</a>
-                    <code>Admin123!</code>
-                </li>
-                <li>
-                    <strong>Member:</strong> 
-                    <a href="#" class="form-link btn-fill-demo" data-email="alice@gmail.com" data-password="Member123!">alice@gmail.com</a>
-                    <code>Member123!</code>
-                </li>
-            </ul>
-        </div>
 
         <div class="auth-footer">
             Don't have an account? <a href="<?= base_url('register.php') ?>" class="form-link">Register here</a>

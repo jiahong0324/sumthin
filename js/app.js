@@ -36,17 +36,12 @@ $(document).ready(function() {
         }
     });
 
-    // 4. Quick Demo Credential Autofill (Convenience during live demonstration)
-    $(document).on('click', '.btn-fill-demo', function(e) {
-        e.preventDefault();
-        var email = $(this).data('email');
-        var password = $(this).data('password');
-
-        if ($('#email').length) {
-            $('#email').val(email);
-        }
-        if ($('#password').length) {
-            $('#password').val(password);
+    // 4. Checkout Address Selector Toggle
+    $(document).on('change', 'input[name="address_choice"]', function() {
+        if ($(this).val() === 'new') {
+            $('#new-address-fields').slideDown(200);
+        } else {
+            $('#new-address-fields').slideUp(200);
         }
     });
 

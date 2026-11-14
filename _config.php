@@ -25,10 +25,13 @@ return [
         'session_timeout' => 1800,       // 30 minutes in seconds
         'max_login_fails' => 3,          // Lock account after 3 failed attempts
         'lockout_time'    => 900,        // Lock duration: 15 minutes (in seconds)
+        'debug'           => false,      // Development debug mode: false for production
     ],
 
     // Gmail SMTP (For PHPMailer: password reset, verification, order notices)
     'mail' => [
+        'enabled'    => true,            // Toggle email dispatching
+        'debug'      => false,           // SMTP debug output
         'smtp_host'  => 'smtp.gmail.com',
         'smtp_port'  => 587,
         'smtp_auth'  => true,

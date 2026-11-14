@@ -10,6 +10,13 @@
 
 // 1. Load centralized configuration
 $config = require __DIR__ . '/_config.php';
+if (file_exists(__DIR__ . '/_config.local.php')) {
+    $local_config = require __DIR__ . '/_config.local.php';
+    if (is_array($local_config)) {
+        $config = array_replace_recursive($config, $local_config);
+    }
+}
+require_once __DIR__ . '/_mail.php';
 
 // 2. Start Secure Session with configuration
 if (session_status() === PHP_SESSION_NONE) {
@@ -59,29 +66,52 @@ try {
     ]);
 } catch (PDOException $e) {
     // Graceful error display without revealing credentials
+    $debug_info = '';
+    if (!empty($config['app']['debug'])) {
+        $debug_info = '<pre style="background:#fff;padding:10px;border-radius:4px;border:1px solid #fca5a5;font-size:12px;overflow:auto;">' . htmlspecialchars($e->getMessage()) . '</pre>';
+    }
     die('<div style="font-family:sans-serif;padding:30px;max-width:600px;margin:50px auto;border:1px solid #ef4444;background:#fef2f2;border-radius:8px;">'
         . '<h2 style="color:#b91c1c;margin-top:0;">Database Connection Error</h2>'
         . '<p style="color:#4b5563;">Could not connect to the database <strong>' . htmlspecialchars($config['db']['dbname']) . '</strong>.</p>'
         . '<p style="color:#6b7280;font-size:14px;"><strong>Tips:</strong> Ensure Apache & MySQL are running in XAMPP, and that you have imported <code>database/sumthin_db.sql</code> via phpMyAdmin.</p>'
-        . '<pre style="background:#fff;padding:10px;border-radius:4px;border:1px solid #fca5a5;font-size:12px;overflow:auto;">' . htmlspecialchars($e->getMessage()) . '</pre>'
+        . $debug_info
         . '</div>');
 }
 
 // 5. Global Error Collector for Server-Side Form Validation
 $errors = [];
 
-// 6. Automatic Authentication via "Remember Me" Cookie
+// 6. Automatic Authentication via "Remember Me" Cookie (SHA-256 token lookup & rotation)
 if (empty($_SESSION['user']) && !empty($_COOKIE['sumthin_remember'])) {
     try {
-        $token = $_COOKIE['sumthin_remember'];
-        $rem_stmt = $db->prepare('SELECT * FROM `user` WHERE `remember_token` = ? AND `status` = ? LIMIT 1');
-        $rem_stmt->execute([$token, 'Active']);
+        $raw_token  = (string)$_COOKIE['sumthin_remember'];
+        $token_hash = hash('sha256', $raw_token);
+        $rem_stmt   = $db->prepare('SELECT * FROM `user` WHERE `remember_token` = ? AND `status` = ? LIMIT 1');
+        $rem_stmt->execute([$token_hash, 'Active']);
         $remembered_user = $rem_stmt->fetch();
+
         if ($remembered_user) {
             session_regenerate_id(true);
             unset($remembered_user->password_hash);
             $_SESSION['user'] = $remembered_user;
             $_SESSION['last_activity'] = time();
+
+            // Rotate remember token to protect against token theft
+            $new_raw_token  = bin2hex(random_bytes(32));
+            $new_token_hash = hash('sha256', $new_raw_token);
+            $rot_stmt = $db->prepare('UPDATE `user` SET `remember_token` = ? WHERE `id` = ?');
+            $rot_stmt->execute([$new_token_hash, $remembered_user->id]);
+
+            $is_https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') 
+                     || (isset($_SERVER['SERVER_PORT']) && (int)$_SERVER['SERVER_PORT'] === 443);
+
+            setcookie('sumthin_remember', $new_raw_token, [
+                'expires'  => time() + (30 * 86400),
+                'path'     => '/',
+                'httponly' => true,
+                'secure'   => $is_https,
+                'samesite' => 'Lax'
+            ]);
         } else {
             setcookie('sumthin_remember', '', time() - 3600, '/');
         }
@@ -218,29 +248,77 @@ function is_member(): bool {
 }
 
 /**
+ * Log technical exception and return a clean, friendly user message (appends detail only in debug mode)
+ */
+function app_error_message(string $friendly_message, Throwable $e): string {
+    global $config;
+    error_log($friendly_message . ': ' . $e->getMessage());
+    if (!empty($config['app']['debug'])) {
+        return $friendly_message . ' (' . $e->getMessage() . ')';
+    }
+    return $friendly_message;
+}
+
+/**
+ * Refresh logged-in user from the database to instantly detect blocked or removed accounts
+ */
+function refresh_session_user(): void {
+    global $db;
+    if (!is_logged_in()) {
+        return;
+    }
+
+    $user_id = (int)$_SESSION['user']->id;
+    try {
+        $stmt = $db->prepare('SELECT `id`, `email`, `name`, `phone`, `role`, `photo`, `status` FROM `user` WHERE `id` = ?');
+        $stmt->execute([$user_id]);
+        $fresh_user = $stmt->fetch();
+
+        if (!$fresh_user || $fresh_user->status === 'Blocked') {
+            // Destroy session and invalidate remember-me cookie immediately
+            $_SESSION = [];
+            if (ini_get('session.use_cookies')) {
+                $params = session_get_cookie_params();
+                setcookie(session_name(), '', time() - 42000,
+                    $params['path'], $params['domain'],
+                    $params['secure'], $params['httponly']
+                );
+            }
+            session_destroy();
+            setcookie('sumthin_remember', '', time() - 3600, '/');
+
+            session_start();
+            set_flash('error', 'Your account has been suspended by the administrator.');
+            redirect(base_url('login.php'));
+        }
+
+        // Store clean user object without password_hash
+        $_SESSION['user'] = $fresh_user;
+    } catch (Exception $e) {
+        error_log('refresh_session_user error: ' . $e->getMessage());
+    }
+}
+
+/**
  * Enforce role-based access control on protected pages
  * @param string|array $allowed_roles e.g. 'Admin' or ['Admin', 'Member']
  */
 function auth($allowed_roles): void {
+    // 1. Always verify fresh account status from database
+    if (is_logged_in()) {
+        refresh_session_user();
+    }
+
     $roles = (array)$allowed_roles;
 
-    // 1. Not logged in -> Save target URL and redirect to login
+    // 2. Not logged in -> Save target URL and redirect to login
     if (!is_logged_in()) {
-        $_SESSION['redirect_after_login'] = $_SERVER['REQUEST_URI'];
+        $_SESSION['redirect_after_login'] = $_SERVER['REQUEST_URI'] ?? base_url('index.php');
         set_flash('warning', 'Please sign in to access this page.');
         redirect(base_url('login.php'));
     }
 
     $current_role = $_SESSION['user']->role;
-
-    // 2. Check if user's account is blocked
-    if ($_SESSION['user']->status === 'Blocked') {
-        session_unset();
-        session_destroy();
-        session_start();
-        set_flash('error', 'Your account has been suspended by the administrator.');
-        redirect(base_url('login.php'));
-    }
 
     // 3. User does not possess the required role
     if (!in_array($current_role, $roles, true)) {
@@ -254,6 +332,7 @@ function auth($allowed_roles): void {
  */
 function guest_only(): void {
     if (is_logged_in()) {
+        refresh_session_user();
         if (is_admin()) {
             redirect(base_url('admin/index.php'));
         } else {
@@ -458,13 +537,146 @@ function reset_login_attempts(int $user_id): void {
 /**
  * Log outgoing email into email_log table
  */
-function log_email(string $recipient, string $subject, string $body, string $status = 'Sent'): void {
+function log_email(string $recipient, string $subject, string $body, string $status = 'Sent', string $type = 'system', ?int $sent_by = null): void {
     global $db;
     try {
-        $stmt = $db->prepare('INSERT INTO `email_log` (`recipient`, `subject`, `body`, `status`) VALUES (?, ?, ?, ?)');
-        $stmt->execute([$recipient, $subject, $body, $status]);
+        $stmt = $db->prepare('INSERT INTO `email_log` (`recipient`, `subject`, `body`, `status`, `type`, `sent_by`) VALUES (?, ?, ?, ?, ?, ?)');
+        $stmt->execute([$recipient, $subject, $body, $status, $type, $sent_by]);
     } catch (Exception $e) {
-        // Silent catch so email logging never crashes core transactions
+        error_log('log_email error: ' . $e->getMessage());
+    }
+}
+
+/**
+ * Check if a member has a Delivered order containing a product that has not been reviewed yet
+ *
+ * @param int $user_id
+ * @param int $product_id
+ * @return int|null Order ID if reviewable, or null
+ */
+function find_reviewable_order(int $user_id, int $product_id): ?int {
+    global $db;
+    try {
+        $stmt = $db->prepare('
+            SELECT o.id 
+            FROM `order` o
+            JOIN `order_item` oi ON o.id = oi.order_id
+            LEFT JOIN `review` r ON r.user_id = o.user_id AND r.product_id = oi.product_id AND r.order_id = o.id
+            WHERE o.user_id = ? 
+              AND oi.product_id = ? 
+              AND o.status = "Delivered"
+              AND r.id IS NULL
+            ORDER BY o.id DESC
+            LIMIT 1
+        ');
+        $stmt->execute([$user_id, $product_id]);
+        $order_id = $stmt->fetchColumn();
+        return $order_id ? (int)$order_id : null;
+    } catch (Exception $e) {
+        error_log('find_reviewable_order error: ' . $e->getMessage());
+        return null;
+    }
+}
+
+/**
+ * Reusable atomic order cancellation helper with inventory restoration
+ *
+ * @param int $order_id
+ * @param int|null $user_id If provided, verifies the order belongs to this customer
+ * @param string $actor 'Member' or 'Admin'
+ * @return array ['ok' => bool, 'message' => string]
+ */
+function cancel_order(int $order_id, ?int $user_id = null, string $actor = 'Member'): array {
+    global $db, $config;
+
+    if ($order_id <= 0) {
+        return ['ok' => false, 'message' => 'Invalid order ID.'];
+    }
+
+    try {
+        $db->beginTransaction();
+
+        // 1. Lock the order row to prevent race conditions
+        $stmt = $db->prepare('SELECT * FROM `order` WHERE `id` = ? FOR UPDATE');
+        $stmt->execute([$order_id]);
+        $order = $stmt->fetch();
+
+        if (!$order) {
+            $db->rollBack();
+            return ['ok' => false, 'message' => 'Order not found.'];
+        }
+
+        // 2. Ownership verification
+        if ($user_id !== null && (int)$order->user_id !== $user_id) {
+            $db->rollBack();
+            return ['ok' => false, 'message' => 'You do not have permission to cancel this order.'];
+        }
+
+        // 3. Status validation: Only Pending or Processing can be cancelled
+        if (!in_array($order->status, ['Pending', 'Processing'], true)) {
+            $db->rollBack();
+            return [
+                'ok' => false,
+                'message' => "Order #{$order->order_no} cannot be cancelled because its status is {$order->status}."
+            ];
+        }
+
+        // 4. Determine new payment_status: 'Refunded' only if 'Paid', otherwise keep 'Unpaid'
+        $new_payment_status = ($order->payment_status === 'Paid') ? 'Refunded' : $order->payment_status;
+
+        // 5. Update master order record
+        $up = $db->prepare('UPDATE `order` SET `status` = "Cancelled", `payment_status` = ?, `tracking_no` = NULL WHERE `id` = ?');
+        $up->execute([$new_payment_status, $order_id]);
+
+        // 6. Restore product stock quantities
+        $items_stmt = $db->prepare('SELECT `product_id`, `quantity` FROM `order_item` WHERE `order_id` = ?');
+        $items_stmt->execute([$order_id]);
+        $order_items = $items_stmt->fetchAll();
+
+        $restore_stock = $db->prepare('UPDATE `product` SET `stock` = `stock` + ? WHERE `id` = ?');
+        foreach ($order_items as $item) {
+            $restore_stock->execute([$item->quantity, $item->product_id]);
+        }
+
+        // 7. Retrieve customer info for email dispatch
+        $u_stmt = $db->prepare('SELECT `name`, `email` FROM `user` WHERE `id` = ?');
+        $u_stmt->execute([$order->user_id]);
+        $customer = $u_stmt->fetch();
+
+        $db->commit();
+
+        // 8. Dispatch cancellation notice
+        if ($customer && function_exists('send_mail')) {
+            $refund_info = ($new_payment_status === 'Refunded')
+                ? 'Your payment of RM ' . number_format((float)$order->final_amount, 2) . ' will be refunded to your original payment method.'
+                : 'No payment was captured for this order.';
+
+            $mail_body = "<p>Dear " . encode($customer->name) . ",</p>"
+                . "<p>Your order <strong>#" . encode($order->order_no) . "</strong> has been cancelled by " . encode($actor) . ".</p>"
+                . "<p>{$refund_info}</p>"
+                . "<p>Thank you for shopping with sumthin.</p>";
+
+            send_mail(
+                $customer->email,
+                $customer->name,
+                "Order Cancelled - {$order->order_no}",
+                $mail_body,
+                'order',
+                ($actor === 'Admin' && isset($_SESSION['user']) ? (int)$_SESSION['user']->id : null)
+            );
+        }
+
+        $success_msg = ($new_payment_status === 'Refunded')
+            ? "Order {$order->order_no} has been cancelled successfully. Your payment will be refunded."
+            : "Order {$order->order_no} has been cancelled successfully.";
+
+        return ['ok' => true, 'message' => $success_msg];
+    } catch (Exception $e) {
+        if ($db->inTransaction()) {
+            $db->rollBack();
+        }
+        $msg = app_error_message('Order cancellation failed. Please try again', $e);
+        return ['ok' => false, 'message' => $msg];
     }
 }
 
@@ -503,4 +715,174 @@ function setting(string $key, string $default = ''): string {
     }
 
     return $settings_cache[$key] ?? $default;
+}
+
+// ============================================================================
+// HELPER FUNCTIONS: Validation & Secure Media Uploads (TASK C1)
+// ============================================================================
+
+/**
+ * Validate full name length
+ */
+function validate_name(string $name, int $min = 3, int $max = 100): string {
+    $trimmed = trim($name);
+    if ($trimmed === '') {
+        return 'Full name is required.';
+    }
+    $len = mb_strlen($trimmed);
+    if ($len < $min) {
+        return "Full name must be at least {$min} characters.";
+    }
+    if ($len > $max) {
+        return "Full name cannot exceed {$max} characters.";
+    }
+    return '';
+}
+
+/**
+ * Validate Malaysian mobile phone format
+ * Format: 01X-XXXXXXX or 01XXXXXXXX or +601XXXXXXXX
+ */
+function validate_phone(string $phone): string {
+    $trimmed = trim($phone);
+    if ($trimmed === '') {
+        return 'Phone number is required.';
+    }
+    if (!preg_match('/^(\+?6?01)[0-46-9]-*[0-9]{7,8}$/', $trimmed)) {
+        return 'Please enter a valid Malaysian mobile number (e.g. 012-3456789).';
+    }
+    return '';
+}
+
+/**
+ * Validate password complexity: min 8 characters, at least 1 uppercase, 1 lowercase, 1 digit
+ */
+function validate_password(string $password, int $min = 8): string {
+    if ($password === '') {
+        return 'Password is required.';
+    }
+    if (strlen($password) < $min) {
+        return "Password must be at least {$min} characters long.";
+    }
+    if (!preg_match('/[A-Z]/', $password)) {
+        return 'Password must contain at least one uppercase letter (A-Z).';
+    }
+    if (!preg_match('/[a-z]/', $password)) {
+        return 'Password must contain at least one lowercase letter (a-z).';
+    }
+    if (!preg_match('/[0-9]/', $password)) {
+        return 'Password must contain at least one number (0-9).';
+    }
+    return '';
+}
+
+/**
+ * Standard Malaysian states list
+ */
+function get_malaysian_states(): array {
+    return [
+        'Wilayah Persekutuan' => 'Wilayah Persekutuan (KL / Putrajaya / Labuan)',
+        'Selangor'            => 'Selangor',
+        'Penang'              => 'Penang',
+        'Johor'               => 'Johor',
+        'Perak'               => 'Perak',
+        'Melaka'              => 'Melaka',
+        'Negeri Sembilan'     => 'Negeri Sembilan',
+        'Kedah'               => 'Kedah',
+        'Pahang'              => 'Pahang',
+        'Terengganu'          => 'Terengganu',
+        'Kelantan'            => 'Kelantan',
+        'Sabah'               => 'Sabah',
+        'Sarawak'             => 'Sarawak',
+    ];
+}
+
+/**
+ * Handle uploaded image with security validation (error codes, size limit, extension whitelist, finfo MIME check)
+ *
+ * @param string $field The key in $_FILES
+ * @param string $folder Relative folder name under uploads/ (e.g. 'members' or 'products') or full path
+ * @param string $prefix Prefix for generated filename (e.g. 'user' or 'sumthin')
+ * @param string|null &$error Reference to error string output
+ * @param int $max_mb Maximum allowed size in megabytes (default 2)
+ * @return string|null Generated filename on success, or null on error or when no file uploaded
+ */
+function save_uploaded_image(string $field, string $folder, string $prefix, ?string &$error = null, int $max_mb = 2): ?string {
+    if (!isset($_FILES[$field]) || $_FILES[$field]['error'] === UPLOAD_ERR_NO_FILE) {
+        return null;
+    }
+
+    $file = $_FILES[$field];
+
+    if ($file['error'] !== UPLOAD_ERR_OK) {
+        $error = 'File upload error (Code: ' . (int)$file['error'] . ').';
+        return null;
+    }
+
+    $max_bytes = $max_mb * 1024 * 1024;
+    if ($file['size'] > $max_bytes) {
+        $error = "File size cannot exceed {$max_mb} MB.";
+        return null;
+    }
+
+    $allowed_exts  = ['jpg', 'jpeg', 'png', 'webp'];
+    $allowed_mimes = ['image/jpeg', 'image/png', 'image/webp'];
+
+    $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+    if (!in_array($ext, $allowed_exts, true)) {
+        $error = 'Allowed file formats: JPG, JPEG, PNG, WEBP.';
+        return null;
+    }
+
+    // Verify MIME type using finfo
+    $finfo = finfo_open(FILEINFO_MIME_TYPE);
+    $mime = finfo_file($finfo, $file['tmp_name']);
+    finfo_close($finfo);
+
+    if (!in_array($mime, $allowed_mimes, true)) {
+        $error = 'Invalid image content detected. Upload rejected.';
+        return null;
+    }
+
+    // Determine target upload directory
+    $upload_dir = str_contains($folder, DIRECTORY_SEPARATOR) || str_contains($folder, '/') 
+        ? rtrim($folder, '/\\') 
+        : __DIR__ . '/uploads/' . trim($folder, '/\\');
+
+    if (!is_dir($upload_dir)) {
+        @mkdir($upload_dir, 0755, true);
+    }
+
+    $filename = $prefix . '_' . bin2hex(random_bytes(8)) . '.' . $ext;
+    $destination = $upload_dir . DIRECTORY_SEPARATOR . $filename;
+
+    if (!move_uploaded_file($file['tmp_name'], $destination)) {
+        $error = 'Failed to save uploaded file to disk.';
+        return null;
+    }
+
+    return $filename;
+}
+
+/**
+ * Safely delete an uploaded image file, preserving defaults
+ *
+ * @param string $folder Subfolder under uploads/ or full path
+ * @param string|null $filename File basename
+ */
+function delete_uploaded_image(string $folder, ?string $filename): void {
+    if (!$filename) return;
+    $clean_name = basename($filename);
+    if ($clean_name === '' || str_starts_with($clean_name, 'default')) {
+        return;
+    }
+
+    $target_dir = str_contains($folder, DIRECTORY_SEPARATOR) || str_contains($folder, '/')
+        ? rtrim($folder, '/\\')
+        : __DIR__ . '/uploads/' . trim($folder, '/\\');
+
+    $full_path = $target_dir . DIRECTORY_SEPARATOR . $clean_name;
+    if (file_exists($full_path) && is_file($full_path)) {
+        @unlink($full_path);
+    }
 }

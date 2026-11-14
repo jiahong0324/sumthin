@@ -118,8 +118,8 @@ require_once __DIR__ . '/_head.php';
 
 <div class="container">
     <!-- Category Filter Tabs -->
-    <div style="margin-bottom: 24px;">
-        <div style="display:flex; gap:10px; overflow-x:auto; padding-bottom:8px;">
+    <div class="mb-24">
+        <div class="category-scroll-list">
             <a href="<?= base_url('index.php' . ($q !== '' ? '?q=' . urlencode($q) : '') . '#catalog') ?>" 
                class="btn <?= empty($cat_slug) ? 'btn-primary-sm' : 'btn-outline-sm' ?>">
                All Categories
@@ -139,11 +139,11 @@ require_once __DIR__ . '/_head.php';
     </div>
 
     <!-- Multi-Criteria Search & Filter Controls Panel (Basic Searching + Combined Filter/Sort) -->
-    <section id="catalog" class="card-panel" style="background:#fff; border:1px solid var(--border); border-radius:var(--radius); padding:20px; margin-bottom:28px; box-shadow:var(--shadow-sm);">
-        <form action="<?= base_url('index.php') ?>#catalog" method="GET" style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;">
+    <section id="catalog" class="card-panel catalog-filter-panel">
+        <form action="<?= base_url('index.php') ?>#catalog" method="GET" class="catalog-filter-form">
             <!-- Keyword Search Input -->
-            <div style="flex:2; min-width:240px;">
-                <label for="q" class="form-label" style="font-size:12px; margin-bottom:4px;">Search sumthin Gadgets</label>
+            <div class="filter-group-search">
+                <label for="q" class="form-label filter-label">Search sumthin Gadgets</label>
                 <?= html_text('q', $q, [
                     'placeholder' => 'Search by model, GaN, wireless, wattage, optical...',
                     'autocomplete' => 'off'
@@ -151,8 +151,8 @@ require_once __DIR__ . '/_head.php';
             </div>
 
             <!-- Category Selector -->
-            <div style="flex:1; min-width:180px;">
-                <label for="cat" class="form-label" style="font-size:12px; margin-bottom:4px;">Category</label>
+            <div class="filter-group-category">
+                <label for="cat" class="form-label filter-label">Category</label>
                 <select name="cat" id="cat" class="form-select">
                     <option value="">All Categories</option>
                     <?php foreach ($categories as $c): ?>
@@ -164,20 +164,20 @@ require_once __DIR__ . '/_head.php';
             </div>
 
             <!-- Min Price Filter -->
-            <div style="width:120px;">
-                <label for="min_price" class="form-label" style="font-size:12px; margin-bottom:4px;">Min RM</label>
+            <div class="filter-group-price">
+                <label for="min_price" class="form-label filter-label">Min RM</label>
                 <?= html_text('min_price', $min_price, ['placeholder' => '0']) ?>
             </div>
 
             <!-- Max Price Filter -->
-            <div style="width:120px;">
-                <label for="max_price" class="form-label" style="font-size:12px; margin-bottom:4px;">Max RM</label>
+            <div class="filter-group-price">
+                <label for="max_price" class="form-label filter-label">Max RM</label>
                 <?= html_text('max_price', $max_price, ['placeholder' => '1500']) ?>
             </div>
 
             <!-- Sorting Dropdown -->
-            <div style="width:170px;">
-                <label for="sort" class="form-label" style="font-size:12px; margin-bottom:4px;">Sort By</label>
+            <div class="filter-group-sort">
+                <label for="sort" class="form-label filter-label">Sort By</label>
                 <select name="sort" id="sort" class="form-select">
                     <option value="featured" <?= ($sort === 'featured') ? 'selected' : '' ?>>Featured First</option>
                     <option value="price_asc" <?= ($sort === 'price_asc') ? 'selected' : '' ?>>Price: Low to High</option>
@@ -188,11 +188,11 @@ require_once __DIR__ . '/_head.php';
             </div>
 
             <!-- Buttons -->
-            <div style="display:flex; gap:8px;">
-                <button type="submit" class="btn btn-primary-sm" style="height:38px;">
+            <div class="filter-group-actions">
+                <button type="submit" class="btn btn-primary-sm btn-filter-submit">
                     Search / Filter
                 </button>
-                <a href="<?= base_url('index.php#catalog') ?>" class="btn btn-outline-sm" style="height:38px; display:inline-flex; align-items:center;">
+                <a href="<?= base_url('index.php#catalog') ?>" class="btn btn-outline-sm btn-filter-reset">
                     Reset
                 </a>
             </div>
@@ -200,39 +200,39 @@ require_once __DIR__ . '/_head.php';
     </section>
 
     <!-- Catalog Header / Active Filter Summary -->
-    <div class="section-title-wrap" style="margin-bottom:20px;">
+    <div class="section-title-wrap mb-20">
         <div>
             <h2 class="section-title">
                 <?= $current_category ? encode($current_category->name) : 'Product Catalog' ?>
                 <?php if ($q !== ''): ?>
-                    <span style="font-weight:400; font-size:16px; color:var(--gray);"> &mdash; matching "<em><?= encode($q) ?></em>"</span>
+                    <span class="catalog-match-query"> &mdash; matching "<em><?= encode($q) ?></em>"</span>
                 <?php endif; ?>
             </h2>
             <?php if ($current_category && $current_category->description): ?>
-                <p style="font-size:14px; color:var(--gray); margin-top:4px;">
+                <p class="catalog-match-desc">
                     <?= encode($current_category->description) ?>
                 </p>
             <?php endif; ?>
         </div>
-        <span style="font-size:13px; color:var(--gray);">
+        <span class="catalog-item-count">
             Found <strong><?= $total_rows ?></strong> product(s) &bull; Page <?= $page ?> of <?= $total_pages ?>
         </span>
     </div>
 
     <!-- Product Catalog Grid -->
     <?php if (empty($products)): ?>
-        <div style="text-align:center; padding:60px 20px; background:#fff; border-radius:10px; border:1px solid var(--border); box-shadow:var(--shadow-sm); margin-bottom:40px;">
-            <div style="font-size:48px; margin-bottom:12px;">🔍</div>
-            <h3 style="font-size:20px; font-weight:800; color:var(--dark); margin-bottom:8px;">No matching gadgets found</h3>
-            <p style="color:var(--gray); font-size:14px; margin-bottom:18px;">Try refining your keywords or clearing your price filter range.</p>
+        <div class="catalog-empty-card">
+            <div class="empty-state-icon">🔍</div>
+            <h3 class="empty-state-title">No matching gadgets found</h3>
+            <p class="empty-state-desc">Try refining your keywords or clearing your price filter range.</p>
             <a href="<?= base_url('index.php#catalog') ?>" class="btn btn-primary-sm">Reset All Filters</a>
         </div>
     <?php else: ?>
-        <div class="product-grid" style="margin-bottom: 36px;">
+        <div class="product-grid mb-36">
             <?php foreach ($products as $p): ?>
                 <article class="product-card">
                     <!-- Product Photo Link -->
-                    <a href="<?= base_url('product.php?id=' . (int)$p->id) ?>" class="product-card-image-wrap" style="text-decoration:none; display:flex;">
+                    <a href="<?= base_url('product.php?id=' . (int)$p->id) ?>" class="product-card-image-wrap product-card-link">
                         <img src="<?= base_url('uploads/products/' . encode($p->photo_url)) ?>" 
                              alt="<?= encode($p->name) ?>" 
                              class="product-card-img" 
@@ -246,7 +246,7 @@ require_once __DIR__ . '/_head.php';
 
                     <!-- Product Title -->
                     <h3 class="product-name">
-                        <a href="<?= base_url('product.php?id=' . (int)$p->id) ?>" style="text-decoration:none; color:inherit;">
+                        <a href="<?= base_url('product.php?id=' . (int)$p->id) ?>" class="product-title-link">
                             <?= encode($p->name) ?>
                         </a>
                     </h3>
@@ -258,28 +258,28 @@ require_once __DIR__ . '/_head.php';
                     <div class="product-footer">
                         <div>
                             <span class="product-price">RM <?= number_format((float)$p->price, 2) ?></span>
-                            <div class="product-stock" style="margin-top:2px;">
+                            <div class="product-stock mt-2">
                                 <?php if ($p->stock > 15): ?>
-                                    <span style="color:#15803d;">In Stock (<?= (int)$p->stock ?>)</span>
+                                    <span class="stock-status-in">In Stock (<?= (int)$p->stock ?>)</span>
                                 <?php elseif ($p->stock > 0): ?>
-                                    <span style="color:#b45309; font-weight:700;">Low Stock (<?= (int)$p->stock ?> left)</span>
+                                    <span class="stock-status-low">Low Stock (<?= (int)$p->stock ?> left)</span>
                                 <?php else: ?>
-                                    <span style="color:var(--error); font-weight:700;">Out of Stock</span>
+                                    <span class="stock-status-out">Out of Stock</span>
                                 <?php endif; ?>
                             </div>
                         </div>
 
-                        <div style="display:flex; gap:6px; align-items:center;">
-                            <a href="<?= base_url('product.php?id=' . (int)$p->id) ?>" class="btn btn-outline-sm" style="font-size:12px; padding:6px 10px;">
+                        <div class="product-card-actions">
+                            <a href="<?= base_url('product.php?id=' . (int)$p->id) ?>" class="btn btn-outline-sm btn-card-action">
                                 Details
                             </a>
                             <?php if ($p->stock > 0): ?>
-                                <form action="<?= base_url('cart_action.php') ?>" method="POST" style="display:inline;">
+                                <form action="<?= base_url('cart_action.php') ?>" method="POST" class="d-inline">
                                     <?= csrf_field() ?>
                                     <input type="hidden" name="action" value="add">
                                     <input type="hidden" name="product_id" value="<?= (int)$p->id ?>">
                                     <input type="hidden" name="quantity" value="1">
-                                    <button type="submit" class="btn btn-primary-sm" style="font-size:12px; padding:6px 10px;">
+                                    <button type="submit" class="btn btn-primary-sm btn-card-action">
                                         + Cart
                                     </button>
                                 </form>
@@ -292,18 +292,18 @@ require_once __DIR__ . '/_head.php';
 
         <!-- Pagination Controls (Combined Filtering, Sorting & Paging) -->
         <?php if ($total_pages > 1): ?>
-            <div style="display:flex; justify-content:center; align-items:center; gap:8px; margin-bottom:50px;">
+            <div class="pagination-wrapper">
                 <?php if ($page > 1): ?>
                     <a href="<?= catalog_page_url($page - 1) ?>" class="btn btn-outline-sm">&larr; Previous</a>
                 <?php endif; ?>
 
                 <?php for ($i = 1; $i <= $total_pages; $i++): ?>
                     <?php if ($i === $page): ?>
-                        <span class="btn btn-primary-sm" style="pointer-events:none; font-weight:800; min-width:36px; text-align:center;"><?= $i ?></span>
+                        <span class="btn btn-primary-sm pagination-active"><?= $i ?></span>
                     <?php elseif ($i == 1 || $i == $total_pages || ($i >= $page - 2 && $i <= $page + 2)): ?>
-                        <a href="<?= catalog_page_url($i) ?>" class="btn btn-outline-sm" style="min-width:36px; text-align:center;"><?= $i ?></a>
+                        <a href="<?= catalog_page_url($i) ?>" class="btn btn-outline-sm pagination-link"><?= $i ?></a>
                     <?php elseif ($i == $page - 3 || $i == $page + 3): ?>
-                        <span style="color:var(--gray); padding:0 4px;">...</span>
+                        <span class="pagination-ellipsis">...</span>
                     <?php endif; ?>
                 <?php endfor; ?>
 

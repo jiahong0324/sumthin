@@ -13,3 +13,16 @@ $RECYCLE.BIN/
 *.njsproj
 *.sln
 *.sw?
+
+# Local environment & secrets configuration (Untracked)
+/_config.local.php
+
+# User uploads: ignore all dynamic uploads except tracked seed assets and defaults
+/uploads/members/*
+!/uploads/members/default_user.png
+!/uploads/members/.htaccess
+
+/uploads/products/*
+!/uploads/products/default_*.png
+!/uploads/products/sumthin_*.png
+!/uploads/products/.htaccess

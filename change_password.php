@@ -31,13 +31,9 @@ if (is_post()) {
         $errors['current_password'] = 'The current password you entered is incorrect.';
     }
 
-    // 3. Validate new password
-    if ($new_password === '') {
-        $errors['new_password'] = 'New password is required.';
-    } elseif (strlen($new_password) < 8) {
-        $errors['new_password'] = 'New password must be at least 8 characters long.';
-    } elseif (!preg_match('/[A-Z]/', $new_password) || !preg_match('/[a-z]/', $new_password) || !preg_match('/[0-9]/', $new_password)) {
-        $errors['new_password'] = 'Password must include uppercase, lowercase, and numeric characters.';
+    // 3. Validate new password using reusable helper
+    if ($err = validate_password($new_password)) {
+        $errors['new_password'] = $err;
     } elseif ($current_password === $new_password) {
         $errors['new_password'] = 'New password cannot be the same as your current password.';
     }
@@ -48,11 +44,15 @@ if (is_post()) {
         $errors['confirm_password'] = 'Passwords do not match.';
     }
 
-    // 4. Update if validation passed
+    // 4. Update if validation passed (revoke remember_token for security)
     if (empty($errors)) {
         $new_hash = password_hash($new_password, PASSWORD_DEFAULT);
-        $update = $db->prepare('UPDATE `user` SET `password_hash` = ? WHERE `id` = ?');
+        $update = $db->prepare('UPDATE `user` SET `password_hash` = ?, `remember_token` = NULL WHERE `id` = ?');
         $update->execute([$new_hash, $user->id]);
+
+        if (isset($_COOKIE['sumthin_remember'])) {
+            setcookie('sumthin_remember', '', time() - 3600, '/');
+        }
 
         set_flash('success', 'Your password has been changed successfully!');
         redirect(base_url('profile.php'));

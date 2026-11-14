@@ -60,46 +60,13 @@ if (is_post()) {
         $errors['stock'] = 'Stock must be a non-negative whole number (0 or higher).';
     }
 
-    // 2. Validate File Upload (Extension + MIME + Size + Rename)
-    $uploaded_filename = null;
+    // 2. Validate File Upload using reusable helper
+    $photo_err = null;
+    $uploaded_filename = save_uploaded_image('photo', 'products', 'sumthin', $photo_err, 2);
     if (!isset($_FILES['photo']) || $_FILES['photo']['error'] === UPLOAD_ERR_NO_FILE) {
         $errors['photo'] = 'Product photo is required.';
-    } elseif ($_FILES['photo']['error'] !== UPLOAD_ERR_OK) {
-        $errors['photo'] = 'File upload encountered an error (Code: ' . $_FILES['photo']['error'] . ').';
-    } else {
-        $file = $_FILES['photo'];
-        $max_size = 2 * 1024 * 1024; // 2 MB limit
-        $allowed_exts  = ['jpg', 'jpeg', 'png', 'webp'];
-        $allowed_mimes = ['image/jpeg', 'image/png', 'image/webp'];
-
-        $file_ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-
-        // a. Check size
-        if ($file['size'] > $max_size) {
-            $errors['photo'] = 'File size cannot exceed 2 MB.';
-        }
-        // b. Check extension whitelist
-        elseif (!in_array($file_ext, $allowed_exts, true)) {
-            $errors['photo'] = 'Allowed file formats: JPG, JPEG, PNG, WEBP.';
-        }
-        // c. Verify real MIME type using finfo
-        else {
-            $finfo = finfo_open(FILEINFO_MIME_TYPE);
-            $mime_type = finfo_file($finfo, $file['tmp_name']);
-            finfo_close($finfo);
-
-            if (!in_array($mime_type, $allowed_mimes, true)) {
-                $errors['photo'] = 'Invalid image content detected. Upload rejected.';
-            } else {
-                // d. Generate cryptographically safe random filename
-                $uploaded_filename = 'sumthin_' . bin2hex(random_bytes(8)) . '.' . $file_ext;
-                $destination = __DIR__ . '/../uploads/products/' . $uploaded_filename;
-
-                if (!move_uploaded_file($file['tmp_name'], $destination)) {
-                    $errors['photo'] = 'Failed to save uploaded file to disk.';
-                }
-            }
-        }
+    } elseif ($photo_err) {
+        $errors['photo'] = $photo_err;
     }
 
     // 3. Database Insertion if Validation Passes
@@ -149,10 +116,8 @@ if (is_post()) {
         } catch (Exception $e) {
             $db->rollBack();
             // Clean up uploaded file if database insert failed
-            if ($uploaded_filename && file_exists(__DIR__ . '/../uploads/products/' . $uploaded_filename)) {
-                unlink(__DIR__ . '/../uploads/products/' . $uploaded_filename);
-            }
-            $errors['db'] = 'Failed to save product: ' . $e->getMessage();
+            delete_uploaded_image('products', $uploaded_filename);
+            $errors['db'] = app_error_message('Failed to save product. Please try again.', $e);
         }
     }
 }

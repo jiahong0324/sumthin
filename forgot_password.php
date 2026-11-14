@@ -3,15 +3,15 @@
 // File: forgot_password.php
 // Project: sumthin (Tech Gadget Online Store)
 // Module: Security (Password Reset Request)
-// Description: Allows users to request a time-limited (1-hour) cryptographic
-//              reset token. Displays link for live demonstration & logs to DB.
+// Description: Allows users to request a cryptographic password reset token.
+//              Protects against user enumeration, enforces rate limiting,
+//              stores SHA-256 token digests, and dispatches via PHPMailer.
 // ============================================================================
 require_once __DIR__ . '/_base.php';
 
 guest_only();
 
 $email = '';
-$demo_reset_link = null;
 
 if (is_post()) {
     verify_csrf();
@@ -25,38 +25,50 @@ if (is_post()) {
     }
 
     if (empty($errors)) {
-        // Query user table
-        $stmt = $db->prepare('SELECT `id`, `name`, `email` FROM `user` WHERE `email` = ?');
+        // 1. Rate Limiting: Max 3 requests per email per hour
+        $rate_stmt = $db->prepare('SELECT COUNT(*) FROM `password_reset` WHERE `email` = ? AND `created_at` >= DATE_SUB(NOW(), INTERVAL 1 HOUR)');
+        $rate_stmt->execute([$email]);
+        $recent_attempts = (int)$rate_stmt->fetchColumn();
+
+        // 2. Query user table (Only Active members can reset passwords)
+        $stmt = $db->prepare('SELECT `id`, `name`, `email`, `status` FROM `user` WHERE `email` = ?');
         $stmt->execute([$email]);
         $user = $stmt->fetch();
 
-        if ($user) {
+        if ($user && $user->status === 'Active' && $recent_attempts < 3) {
             // Generate 64-character cryptographic token
-            $token = bin2hex(random_bytes(32));
-            $expires_at = date('Y-m-d H:i:s', time() + 3600); // 1 hour validity
+            $raw_token   = bin2hex(random_bytes(32));
+            $token_hash  = hash('sha256', $raw_token);
+            $expires_at  = date('Y-m-d H:i:s', time() + 3600); // 1 hour validity
 
-            // Clear previous pending tokens for this email
-            $del = $db->prepare('DELETE FROM `password_reset` WHERE `email` = ?');
-            $del->execute([$email]);
+            // Save SHA-256 hashed token in database
+            $ins = $db->prepare('INSERT INTO `password_reset` (`email`, `token`, `expires_at`, `created_at`) VALUES (?, ?, ?, NOW())');
+            $ins->execute([$email, $token_hash, $expires_at]);
 
-            // Save new reset token in database
-            $ins = $db->prepare('INSERT INTO `password_reset` (`email`, `token`, `expires_at`) VALUES (?, ?, ?)');
-            $ins->execute([$email, $token, $expires_at]);
+            // Construct secure reset link with raw unhashed token
+            $host_prefix = isset($_SERVER['HTTP_HOST'])
+                ? ((isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST'])
+                : '';
+            $reset_url = $host_prefix . base_url("reset_password.php?token={$raw_token}");
 
-            // Construct full reset URL
-            $demo_reset_link = base_url("reset_password.php?token={$token}");
+            // Compose HTML email body
+            $html_body = "<p>Hello <strong>" . encode($user->name) . "</strong>,</p>"
+                       . "<p>A password reset request was initiated for your sumthin account. Click the button below to choose a new password:</p>"
+                       . "<p style='text-align:center; margin:26px 0;'>"
+                       . "<a href='" . encode($reset_url) . "' style='background-color:#2563eb; color:#ffffff; padding:12px 24px; text-decoration:none; border-radius:6px; font-weight:700; display:inline-block; font-size:14px;'>"
+                       . "Reset My Password &rarr;"
+                       . "</a>"
+                       . "</p>"
+                       . "<p style='font-size:12px; color:#64748b;'>This link is valid for 1 hour. If you did not request this password reset, please disregard this email.</p>"
+                       . "<p style='font-size:12px; color:#64748b; word-break:break-all;'>Direct link: <a href='" . encode($reset_url) . "'>" . encode($reset_url) . "</a></p>";
 
-            // Log notification to audit table
-            $mail_body = "Hello {$user->name},\n\nA password reset request was initiated for your sumthin account.\n"
-                       . "Please use the following secure link to reset your password:\n{$demo_reset_link}\n\n"
-                       . "This link will expire in 1 hour.";
-            log_email($email, 'Password Reset Request', $mail_body, 'Sent');
-
-            set_flash('info', 'A password reset link has been generated. For your demonstration, see below.');
-        } else {
-            // Friendly message preventing email enumeration
-            set_flash('info', 'If an account exists with that email, a password reset link has been dispatched.');
+            // Dispatch email via PHPMailer (Logs to email_log automatically)
+            send_mail($email, $user->name, 'Reset Your sumthin Password', $html_body, 'auth');
         }
+
+        // Generic confirmation message to prevent user enumeration
+        set_flash('info', 'If an account exists with that email address, a password reset link has been dispatched to your inbox.');
+        redirect(base_url('forgot_password.php'));
     }
 }
 
@@ -71,19 +83,6 @@ require_once __DIR__ . '/_head.php';
             <p class="auth-subtitle">Enter your registered email to receive a password reset link</p>
         </div>
 
-        <?php if ($demo_reset_link): ?>
-            <!-- Demo Simulation Box: Displays reset link for seamless offline/localhost demonstration -->
-            <div style="background-color:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:16px; margin-bottom:20px;">
-                <p style="font-size:13px; font-weight:700; color:#1e40af; margin-bottom:6px;">
-                    ✉️ Demo Email Simulation (Logged to database `email_log`):
-                </p>
-                <p style="font-size:12px; color:#1e3a8a; word-break:break-all; margin-bottom:10px;">
-                    <a href="<?= encode($demo_reset_link) ?>" class="form-link"><strong><?= encode($demo_reset_link) ?></strong></a>
-                </p>
-                <a href="<?= encode($demo_reset_link) ?>" class="btn btn-primary-sm">Click to Reset Password Now &rarr;</a>
-            </div>
-        <?php endif; ?>
-
         <form action="<?= base_url('forgot_password.php') ?>" method="POST" novalidate>
             <?= csrf_field() ?>
 
@@ -96,7 +95,7 @@ require_once __DIR__ . '/_head.php';
                 <?= err('email') ?>
             </div>
 
-            <button type="submit" class="btn btn-primary btn-block">Generate Reset Link</button>
+            <button type="submit" class="btn btn-primary btn-block">Send Reset Link</button>
         </form>
 
         <div class="auth-footer">

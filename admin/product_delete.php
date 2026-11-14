@@ -62,7 +62,11 @@ if (is_post()) {
 
         set_flash('success', "Product '{$product->name}' was deleted successfully.");
     } catch (PDOException $e) {
-        set_flash('error', 'Database error while deleting product: ' . $e->getMessage());
+        if ($e->getCode() === '23000') {
+            set_flash('error', "Cannot delete product '{$product->name}' because it is part of existing customer order history.");
+        } else {
+            set_flash('error', app_error_message('Failed to delete product. Please try again.', $e));
+        }
     }
 }
 

@@ -4,7 +4,8 @@
 // Project: sumthin (Tech Gadget Online Store)
 // Module: Order Maintenance (Admin Order Inspection & Status Dispatch)
 // Description: Allows administrators to inspect customer order items, shipping
-//              address, update fulfillment status, and assign courier tracking.
+//              address, update fulfillment status via strict transition rules,
+//              record payments, and assign courier tracking with validation.
 // ============================================================================
 require_once __DIR__ . '/../_base.php';
 
@@ -31,35 +32,124 @@ if (!$o) {
     redirect(base_url('admin/orders.php'));
 }
 
+// Define valid fulfillment transition matrix (Terminal states have no outgoing transitions)
+$status_transitions = [
+    'Pending'    => ['Processing', 'Cancelled'],
+    'Processing' => ['Shipped', 'Cancelled'],
+    'Shipped'    => ['Delivered'],
+    'Delivered'  => [],
+    'Cancelled'  => [],
+];
+
+$allowed_next_statuses = $status_transitions[$o->status] ?? [];
+$is_terminal = empty($allowed_next_statuses);
+
 // Handle Status & Tracking Number Update
 if (is_post() && req('action') === 'update_status') {
     verify_csrf();
 
-    $new_status         = req('status');
-    $new_payment_status = req('payment_status');
-    $tracking_no        = req('tracking_no');
+    $new_status         = req('status', $o->status);
+    $new_payment_status = req('payment_status', $o->payment_status);
+    $tracking_no        = trim((string)req('tracking_no', $o->tracking_no ?? ''));
 
-    $allowed_statuses = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'];
-    $allowed_payments = ['Unpaid', 'Paid', 'Refunded'];
-
-    if (in_array($new_status, $allowed_statuses, true) && in_array($new_payment_status, $allowed_payments, true)) {
-        $up = $db->prepare('
-            UPDATE `order` 
-            SET `status` = ?, `payment_status` = ?, `tracking_no` = ? 
-            WHERE `id` = ?
-        ');
-        $up->execute([$new_status, $new_payment_status, $tracking_no ?: null, $id]);
-
-        // Log notification email to customer
-        $body = "Dear {$o->customer_name},\n\nYour sumthin order {$o->order_no} status has been updated to: {$new_status}.\n";
-        if ($tracking_no) {
-            $body .= "Consignment Tracking Number: {$tracking_no}\n";
+    // 1. Validate status transition
+    if ($new_status !== $o->status) {
+        if ($is_terminal) {
+            $errors['status'] = "Order is in terminal state '{$o->status}' and cannot be modified.";
+        } elseif (!in_array($new_status, $allowed_next_statuses, true)) {
+            $errors['status'] = "Invalid status transition from '{$o->status}' to '{$new_status}'. Allowed: " . implode(', ', $allowed_next_statuses) . '.';
         }
-        $body .= "\nThank you for choosing sumthin.";
-        log_email($o->customer_email, "Order Status Update - {$o->order_no}", $body);
+    }
 
-        set_flash('success', "Order #{$o->order_no} updated successfully! Status: {$new_status}");
-        redirect(base_url('admin/order_detail.php?id=' . $id));
+    // 2. Validate tracking number
+    if ($new_status === 'Shipped') {
+        if ($tracking_no === '') {
+            $errors['tracking_no'] = 'Consignment tracking number is required when shipping an order.';
+        } elseif (!preg_match('/^[A-Za-z0-9\-]{3,100}$/', $tracking_no)) {
+            $errors['tracking_no'] = 'Tracking number must be 3-100 alphanumeric characters or hyphens.';
+        }
+    } else {
+        if (in_array($o->status, ['Shipped', 'Delivered'], true)) {
+            // Tracking number is locked/read-only once Shipped or Delivered
+            $tracking_no = $o->tracking_no ?? '';
+        } elseif ($tracking_no !== '' && !preg_match('/^[A-Za-z0-9\-]{3,100}$/', $tracking_no)) {
+            $errors['tracking_no'] = 'Tracking number must be 3-100 alphanumeric characters or hyphens.';
+        }
+    }
+
+    // 3. Validate payment status transition (Admin can only change Unpaid -> Paid)
+    if ($new_payment_status !== $o->payment_status) {
+        if ($o->payment_status === 'Unpaid' && $new_payment_status === 'Paid') {
+            // Valid transition
+        } else {
+            $errors['payment_status'] = "Payment status can only be manually changed from 'Unpaid' to 'Paid'.";
+        }
+    }
+
+    // 4. Execute transition if valid
+    if (empty($errors)) {
+        if ($new_status === 'Cancelled' && $o->status !== 'Cancelled') {
+            // Cancellation workflow with inventory restoral & email dispatch
+            $res = cancel_order($id, null, 'Admin');
+            if ($res['ok']) {
+                set_flash('success', $res['message']);
+                redirect(base_url('admin/order_detail.php?id=' . $id));
+            } else {
+                $errors['status'] = $res['message'];
+            }
+        } else {
+            // Forward progression or payment update
+            try {
+                $db->beginTransaction();
+
+                $up = $db->prepare('
+                    UPDATE `order` 
+                    SET `status` = ?, `payment_status` = ?, `tracking_no` = ? 
+                    WHERE `id` = ?
+                ');
+                $up->execute([
+                    $new_status,
+                    $new_payment_status,
+                    $tracking_no !== '' ? $tracking_no : null,
+                    $id
+                ]);
+
+                // Update payment record if transition was Unpaid -> Paid
+                if ($o->payment_status === 'Unpaid' && $new_payment_status === 'Paid') {
+                    $up_pay = $db->prepare('UPDATE `payment` SET `status` = "Paid", `paid_at` = NOW() WHERE `order_id` = ? AND `status` = "Pending"');
+                    $up_pay->execute([$id]);
+                }
+
+                $db->commit();
+
+                // Send email notification on status change
+                if ($new_status !== $o->status) {
+                    $admin_user_id = (int)($_SESSION['user']->id ?? 0);
+                    $email_body = "<p>Dear <strong>" . encode($o->customer_name) . "</strong>,</p>"
+                                . "<p>Your <strong>sumthin</strong> order <strong>#" . encode($o->order_no) . "</strong> fulfillment status has been updated to: <strong style='color:#2563eb;'>" . encode($new_status) . "</strong>.</p>";
+                    if ($tracking_no !== '') {
+                        $email_body .= "<p>Courier Tracking Reference: <code style='background:#f1f5f9; padding:2px 8px; border-radius:4px; font-weight:700;'>" . encode($tracking_no) . "</code></p>";
+                    }
+                    $email_body .= "<p>You can track your order history and dispatch details in your member portal.</p>"
+                                . "<p>Thank you for choosing sumthin.</p>";
+
+                    send_mail(
+                        $o->customer_email,
+                        $o->customer_name,
+                        "Order Status Update - #" . $o->order_no . " (" . $new_status . ")",
+                        $email_body,
+                        'order',
+                        $admin_user_id > 0 ? $admin_user_id : null
+                    );
+                }
+
+                set_flash('success', "Order #{$o->order_no} status updated to {$new_status} successfully!");
+                redirect(base_url('admin/order_detail.php?id=' . $id));
+            } catch (Exception $e) {
+                $db->rollBack();
+                $errors['db'] = app_error_message('Failed to update order status.', $e);
+            }
+        }
     }
 }
 
@@ -96,7 +186,7 @@ require_once __DIR__ . '/../_head.php';
             <h1 style="font-size:26px; font-weight:800; color:var(--dark); margin-top:6px;">Manage Order #<?= encode($o->order_no) ?></h1>
             <span style="font-size:13px; color:var(--gray);">Customer: <strong><?= encode($o->customer_name) ?></strong> (<?= encode($o->customer_email) ?>)</span>
         </div>
-        <div>
+        <div style="display:flex; gap:8px; align-items:center;">
             <span class="role-pill pill-member" style="font-size:13px; padding:6px 14px;">
                 Placed: <?= encode(date('d M Y, h:i A', strtotime($o->created_at))) ?>
             </span>
@@ -106,40 +196,90 @@ require_once __DIR__ . '/../_head.php';
     <!-- Admin Status Control Panel -->
     <div style="background:#fff; border:1px solid var(--border); border-radius:var(--radius); padding:24px; margin-bottom:28px; box-shadow:var(--shadow-sm);">
         <h2 style="font-size:16px; font-weight:800; color:var(--dark); margin-bottom:16px; border-bottom:1px solid var(--border); padding-bottom:10px;">
-            Update Fulfillment & Tracking
+            Fulfillment & Tracking Workflow
         </h2>
 
-        <form action="<?= base_url('admin/order_detail.php?id=' . $id) ?>" method="POST" style="display:flex; gap:16px; flex-wrap:wrap; align-items:flex-end;">
-            <?= csrf_field() ?>
-            <input type="hidden" name="action" value="update_status">
+        <?= err('db') ?>
 
-            <div style="flex:1; min-width:180px;">
-                <label for="status" class="form-label">Order Fulfillment Status</label>
-                <select name="status" id="status" class="form-select">
-                    <option value="Processing" <?= $o->status === 'Processing' ? 'selected' : '' ?>>Processing</option>
-                    <option value="Shipped" <?= $o->status === 'Shipped' ? 'selected' : '' ?>>Shipped</option>
-                    <option value="Delivered" <?= $o->status === 'Delivered' ? 'selected' : '' ?>>Delivered</option>
-                    <option value="Pending" <?= $o->status === 'Pending' ? 'selected' : '' ?>>Pending</option>
-                    <option value="Cancelled" <?= $o->status === 'Cancelled' ? 'selected' : '' ?>>Cancelled</option>
-                </select>
+        <?php if ($is_terminal && $o->payment_status !== 'Unpaid'): ?>
+            <div style="padding:14px 18px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <span class="badge" style="font-size:13px; padding:6px 12px; background:<?= $o->status === 'Delivered' ? '#ecfdf5' : '#fef2f2' ?>; color:<?= $o->status === 'Delivered' ? '#065f46' : '#991b1b' ?>; font-weight:800; border:1px solid currentColor;">
+                        <?= encode($o->status) ?>
+                    </span>
+                    <span style="font-size:13px; color:var(--gray);">
+                        This order has reached its final state and is locked from further workflow modifications.
+                    </span>
+                </div>
+                <?php if ($o->tracking_no): ?>
+                    <div style="font-size:13px;">
+                        <span style="color:var(--gray);">Tracking Number:</span>
+                        <code style="font-weight:700; color:var(--dark); margin-left:4px;"><?= encode($o->tracking_no) ?></code>
+                    </div>
+                <?php endif; ?>
             </div>
+        <?php else: ?>
+            <form action="<?= base_url('admin/order_detail.php?id=' . $id) ?>" method="POST" style="display:flex; flex-direction:column; gap:16px;">
+                <?= csrf_field() ?>
+                <input type="hidden" name="action" value="update_status">
 
-            <div style="flex:1; min-width:160px;">
-                <label for="payment_status" class="form-label">Payment Status</label>
-                <select name="payment_status" id="payment_status" class="form-select">
-                    <option value="Paid" <?= $o->payment_status === 'Paid' ? 'selected' : '' ?>>Paid</option>
-                    <option value="Unpaid" <?= $o->payment_status === 'Unpaid' ? 'selected' : '' ?>>Unpaid</option>
-                    <option value="Refunded" <?= $o->payment_status === 'Refunded' ? 'selected' : '' ?>>Refunded</option>
-                </select>
-            </div>
+                <div style="display:flex; gap:16px; flex-wrap:wrap; align-items:flex-start;">
+                    <!-- Fulfillment Status Select -->
+                    <div style="flex:1; min-width:200px;">
+                        <label for="status" class="form-label">Order Fulfillment Status</label>
+                        <?php if ($is_terminal): ?>
+                            <input type="text" value="<?= encode($o->status) ?>" readonly class="form-control" style="background:#f8fafc; cursor:not-allowed;">
+                            <input type="hidden" name="status" value="<?= encode($o->status) ?>">
+                        <?php else: ?>
+                            <select name="status" id="status" class="form-select <?= isset($errors['status']) ? 'form-control-error' : '' ?>">
+                                <option value="<?= encode($o->status) ?>" selected><?= encode($o->status) ?> (Current)</option>
+                                <?php foreach ($allowed_next_statuses as $st): ?>
+                                    <option value="<?= encode($st) ?>" <?= (req('status') === $st) ? 'selected' : '' ?>>
+                                        &rarr; Move to <?= encode($st) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                            <?= err('status') ?>
+                        <?php endif; ?>
+                    </div>
 
-            <div style="flex:1.5; min-width:220px;">
-                <label for="tracking_no" class="form-label">Tracking Number</label>
-                <input type="text" name="tracking_no" id="tracking_no" value="<?= encode($o->tracking_no ?? '') ?>" placeholder="e.g. JNT-MY-99881122" class="form-control">
-            </div>
+                    <!-- Payment Status Select -->
+                    <div style="flex:1; min-width:180px;">
+                        <label for="payment_status" class="form-label">Payment Status</label>
+                        <?php if ($o->payment_status === 'Unpaid'): ?>
+                            <select name="payment_status" id="payment_status" class="form-select <?= isset($errors['payment_status']) ? 'form-control-error' : '' ?>">
+                                <option value="Unpaid" <?= (req('payment_status', $o->payment_status) === 'Unpaid') ? 'selected' : '' ?>>Unpaid</option>
+                                <option value="Paid" <?= (req('payment_status', $o->payment_status) === 'Paid') ? 'selected' : '' ?>>Paid (Mark Received)</option>
+                            </select>
+                            <?= err('payment_status') ?>
+                        <?php else: ?>
+                            <input type="text" value="<?= encode($o->payment_status) ?>" readonly class="form-control" style="background:#f8fafc; cursor:not-allowed;">
+                            <input type="hidden" name="payment_status" value="<?= encode($o->payment_status) ?>">
+                            <small style="color:var(--gray); font-size:11px; margin-top:4px; display:block;">Payment status cannot be reversed manually.</small>
+                        <?php endif; ?>
+                    </div>
 
-            <button type="submit" class="btn btn-primary" style="height:42px;">Save Status Update</button>
-        </form>
+                    <!-- Tracking Number Input -->
+                    <div style="flex:1.5; min-width:240px;">
+                        <label for="tracking_no" class="form-label">Courier Tracking Reference</label>
+                        <?php if (in_array($o->status, ['Shipped', 'Delivered'], true)): ?>
+                            <input type="text" name="tracking_no" id="tracking_no" value="<?= encode($o->tracking_no ?? '') ?>" readonly class="form-control" style="background:#f8fafc; cursor:not-allowed;">
+                            <small style="color:var(--gray); font-size:11px; margin-top:4px; display:block;">Tracking number is permanent after consignment dispatch.</small>
+                        <?php else: ?>
+                            <input type="text" name="tracking_no" id="tracking_no" value="<?= encode(req('tracking_no', $o->tracking_no ?? '')) ?>" placeholder="e.g. JNT-MY-99881122" class="form-control <?= isset($errors['tracking_no']) ? 'form-control-error' : '' ?>">
+                            <?= err('tracking_no') ?>
+                            <small style="color:var(--gray); font-size:11px; margin-top:4px; display:block;">Required when moving to Shipped (3-100 alphanumeric or hyphen).</small>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+                <div>
+                    <button type="submit" class="btn btn-primary" style="padding:10px 24px; font-weight:700;">
+                        Apply Workflow Transition
+                    </button>
+                </div>
+            </form>
+        <?php endif; ?>
     </div>
 
     <!-- Order Items and Customer Info Grid -->

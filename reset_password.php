@@ -11,13 +11,14 @@ require_once __DIR__ . '/_base.php';
 guest_only();
 
 $token = req('token');
+$token_hash = ($token !== '') ? hash('sha256', $token) : '';
 $valid_token = false;
 $reset_record = null;
 
-// Validate token presence and expiration in database
-if ($token !== '') {
+// Validate token presence and expiration in database using SHA-256 hash
+if ($token_hash !== '') {
     $stmt = $db->prepare('SELECT * FROM `password_reset` WHERE `token` = ? AND `expires_at` > NOW() LIMIT 1');
-    $stmt->execute([$token]);
+    $stmt->execute([$token_hash]);
     $reset_record = $stmt->fetch();
     if ($reset_record) {
         $valid_token = true;
@@ -30,17 +31,9 @@ if (is_post() && $valid_token) {
     $password         = req('password');
     $confirm_password = req('confirm_password');
 
-    // Server-side validation
-    if ($password === '') {
-        $errors['password'] = 'New password is required.';
-    } elseif (strlen($password) < 8) {
-        $errors['password'] = 'Password must be at least 8 characters long.';
-    } elseif (!preg_match('/[A-Z]/', $password)) {
-        $errors['password'] = 'Password must contain at least one uppercase letter (A-Z).';
-    } elseif (!preg_match('/[a-z]/', $password)) {
-        $errors['password'] = 'Password must contain at least one lowercase letter (a-z).';
-    } elseif (!preg_match('/[0-9]/', $password)) {
-        $errors['password'] = 'Password must contain at least one number (0-9).';
+    // Server-side validation using reusable helper
+    if ($err = validate_password($password)) {
+        $errors['password'] = $err;
     }
 
     if ($confirm_password === '') {
@@ -53,13 +46,16 @@ if (is_post() && $valid_token) {
         // Hash the new password
         $new_hash = password_hash($password, PASSWORD_DEFAULT);
 
-        // Update user record and clear any failed login lockouts
-        $update = $db->prepare('UPDATE `user` SET `password_hash` = ?, `failed_attempts` = 0, `locked_until` = NULL WHERE `email` = ?');
+        // Update user record, clear lockouts, and revoke remember_token so old cookies stop working
+        $update = $db->prepare('UPDATE `user` SET `password_hash` = ?, `failed_attempts` = 0, `locked_until` = NULL, `remember_token` = NULL WHERE `email` = ?');
         $update->execute([$new_hash, $reset_record->email]);
 
         // Delete the used reset token so it cannot be reused
         $del = $db->prepare('DELETE FROM `password_reset` WHERE `token` = ?');
-        $del->execute([$token]);
+        $del->execute([$token_hash]);
+
+        // Clear local remember cookie if set
+        setcookie('sumthin_remember', '', time() - 3600, '/');
 
         set_flash('success', 'Your password has been reset successfully! Please sign in with your new password.');
         redirect(base_url('login.php'));

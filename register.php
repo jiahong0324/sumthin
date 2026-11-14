@@ -27,12 +27,8 @@ if (is_post()) {
 
     // 2. Server-side Input Validation
     // Name validation
-    if ($name === '') {
-        $errors['name'] = 'Full name is required.';
-    } elseif (strlen($name) < 3) {
-        $errors['name'] = 'Full name must be at least 3 characters.';
-    } elseif (strlen($name) > 100) {
-        $errors['name'] = 'Full name cannot exceed 100 characters.';
+    if ($err = validate_name($name, 3, 100)) {
+        $errors['name'] = $err;
     }
 
     // Email validation
@@ -49,24 +45,14 @@ if (is_post()) {
         }
     }
 
-    // Phone validation (format: 01X-XXXXXXX or 10-12 digits)
-    if ($phone === '') {
-        $errors['phone'] = 'Phone number is required.';
-    } elseif (!preg_match('/^(\+?6?01)[0-46-9]-*[0-9]{7,8}$/', $phone)) {
-        $errors['phone'] = 'Please enter a valid Malaysian mobile number (e.g. 012-3456789).';
+    // Phone validation
+    if ($err = validate_phone($phone)) {
+        $errors['phone'] = $err;
     }
 
-    // Password validation (min 8 chars, 1 uppercase, 1 lowercase, 1 number)
-    if ($password === '') {
-        $errors['password'] = 'Password is required.';
-    } elseif (strlen($password) < 8) {
-        $errors['password'] = 'Password must be at least 8 characters long.';
-    } elseif (!preg_match('/[A-Z]/', $password)) {
-        $errors['password'] = 'Password must contain at least one uppercase letter (A-Z).';
-    } elseif (!preg_match('/[a-z]/', $password)) {
-        $errors['password'] = 'Password must contain at least one lowercase letter (a-z).';
-    } elseif (!preg_match('/[0-9]/', $password)) {
-        $errors['password'] = 'Password must contain at least one number (0-9).';
+    // Password validation
+    if ($err = validate_password($password)) {
+        $errors['password'] = $err;
     }
 
     // Confirm password validation

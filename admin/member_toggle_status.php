@@ -14,6 +14,13 @@ if (is_post()) {
     verify_csrf();
 
     $id = (int)req('id');
+
+    // Server-side check: Admin cannot block or deactivate their own account
+    if ($id === (int)$_SESSION['user']->id) {
+        set_flash('error', 'You cannot block or deactivate your own administrator account.');
+        redirect(base_url('admin/members.php'));
+    }
+
     if ($id > 0) {
         $stmt = $db->prepare('SELECT `id`, `name`, `status`, `role` FROM `user` WHERE `id` = ?');
         $stmt->execute([$id]);

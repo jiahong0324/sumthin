@@ -59,24 +59,24 @@ $title = $p->name;
 require_once __DIR__ . '/_head.php';
 ?>
 
-<div class="container" style="max-width: 1050px;">
+<div class="container container-detail">
     <!-- Breadcrumbs -->
-    <div style="font-size:13px; color:var(--gray); margin-bottom:20px;">
+    <div class="breadcrumb-nav">
         <a href="<?= base_url('index.php') ?>" class="form-link">Shop</a> &rsaquo;
         <a href="<?= base_url('index.php?cat=' . encode($p->category_slug)) ?>" class="form-link"><?= encode($p->category_name) ?></a> &rsaquo;
-        <span style="color:var(--dark);"><?= encode($p->name) ?></span>
+        <span class="breadcrumb-current"><?= encode($p->name) ?></span>
     </div>
 
     <!-- Product Showcase Grid -->
-    <div class="card-panel product-showcase-panel" style="display:grid; grid-template-columns: 1fr 1.2fr; gap:40px; background:#fff; border:1px solid var(--border); border-radius:var(--radius-lg); padding:36px; box-shadow:var(--shadow); margin-bottom:40px;">
+    <div class="card-panel product-detail-card">
         <!-- Left: Product Photo Box -->
         <div>
-            <div style="background:#0b0f19; border-radius:12px; height:380px; display:flex; align-items:center; justify-content:center; border:1px solid #1e293b; overflow:hidden; padding:20px;">
+            <div class="product-gallery-stage">
                 <img src="<?= base_url('uploads/products/' . encode($p->photo_url)) ?>" 
                      alt="<?= encode($p->name) ?>" 
-                     style="max-width:100%; max-height:100%; object-fit:contain;">
+                     class="product-gallery-img">
             </div>
-            <div style="margin-top:14px; display:flex; gap:12px; align-items:center; justify-content:center; font-size:13px; color:var(--gray);">
+            <div class="product-trust-row">
                 <span>🛡️ 2-Year sumthin Official Warranty</span>
                 <span>&bull;</span>
                 <span>⚡ Same-Day Dispatch</span>
@@ -85,45 +85,45 @@ require_once __DIR__ . '/_head.php';
 
         <!-- Right: Purchasing Panel -->
         <div>
-            <span class="role-pill pill-member" style="font-size:12px; margin-bottom:8px;">
+            <span class="role-pill pill-member mb-8">
                 <?= encode($p->brand_name ?? 'sumthin') ?> &bull; <?= encode($p->category_name) ?>
             </span>
 
-            <h1 style="font-size:28px; font-weight:800; color:var(--dark); margin:8px 0 12px 0; line-height:1.2;">
+            <h1 class="product-detail-name">
                 <?= encode($p->name) ?>
             </h1>
 
             <!-- Ratings Summary -->
-            <div style="display:flex; align-items:center; gap:8px; margin-bottom:16px;">
-                <span style="color:#d97706; font-size:16px;">
+            <div class="product-rating-row">
+                <span class="rating-stars-gold">
                     <?= str_repeat('★', (int)round($avg_rating ?: 5)) ?>
                 </span>
-                <span style="font-size:14px; font-weight:700; color:var(--dark);">
+                <span class="rating-score-text">
                     <?= $avg_rating ? $avg_rating : '5.0' ?> / 5.0
                 </span>
-                <span style="font-size:13px; color:var(--gray);">
+                <span class="rating-count-text">
                     (<?= count($reviews) ?> customer review<?= count($reviews) !== 1 ? 's' : '' ?>)
                 </span>
             </div>
 
             <!-- Price -->
-            <div style="font-size:36px; font-weight:900; color:var(--dark); margin-bottom:16px;">
+            <div class="product-detail-price">
                 RM <?= number_format((float)$p->price, 2) ?>
             </div>
 
             <!-- Inventory Status -->
-            <div style="margin-bottom:20px;">
+            <div class="mb-20">
                 <?php if ($p->stock > 15): ?>
-                    <span class="role-pill" style="background:#dcfce7; color:#15803d; font-size:13px;">✓ In Stock (<?= (int)$p->stock ?> available)</span>
+                    <span class="role-pill pill-stock-in">✓ In Stock (<?= (int)$p->stock ?> available)</span>
                 <?php elseif ($p->stock > 0): ?>
-                    <span class="role-pill" style="background:#fef3c7; color:#b45309; font-size:13px;">⚠ Low Stock: Only <?= (int)$p->stock ?> left!</span>
+                    <span class="role-pill pill-stock-low">⚠ Low Stock: Only <?= (int)$p->stock ?> left!</span>
                 <?php else: ?>
-                    <span class="role-pill pill-admin" style="font-size:13px;">✕ Currently Out of Stock</span>
+                    <span class="role-pill pill-admin pill-stock-out">✕ Currently Out of Stock</span>
                 <?php endif; ?>
             </div>
 
             <!-- Description -->
-            <div style="font-size:14px; color:var(--dark-muted); line-height:1.7; margin-bottom:24px; border-top:1px solid var(--border); padding-top:16px;">
+            <div class="product-detail-desc">
                 <?= nl2br(encode($p->description)) ?>
             </div>
 
@@ -160,8 +160,8 @@ require_once __DIR__ . '/_head.php';
                     </div>
                 </form>
             <?php else: ?>
-                <div class="shopee-outofstock-box" style="margin-bottom:20px;">
-                    <button type="button" class="btn btn-secondary btn-block" disabled style="cursor:not-allowed; height:48px; font-weight:700;">
+                <div class="shopee-outofstock-box mb-20">
+                    <button type="button" class="btn btn-secondary btn-block btn-disabled-block" disabled>
                         Currently Out of Stock
                     </button>
                 </div>
@@ -169,7 +169,7 @@ require_once __DIR__ . '/_head.php';
 
             <!-- Shopee Guarantee & Wishlist Bar -->
             <div class="shopee-guarantee-bar">
-                <form action="<?= base_url('wishlist.php') ?>" method="POST" style="display:inline;">
+                <form action="<?= base_url('wishlist.php') ?>" method="POST" class="d-inline">
                     <?= csrf_field() ?>
                     <input type="hidden" name="action" value="<?= $in_wishlist ? 'remove' : 'add' ?>">
                     <input type="hidden" name="product_id" value="<?= (int)$p->id ?>">
@@ -191,10 +191,13 @@ require_once __DIR__ . '/_head.php';
     </div>
 
     <!-- Verified Customer Reviews Section -->
-    <section class="card-panel product-reviews-card" style="background:#fff; border:1px solid var(--border); border-radius:var(--radius-lg); padding:32px; box-shadow:var(--shadow-sm); margin-bottom:40px;">
+    <section class="card-panel reviews-section-card">
         <div class="section-title-wrap">
             <h2 class="section-title">Verified Buyer Reviews (<?= count($reviews) ?>)</h2>
-            <?php if (is_member()): ?>
+            <?php 
+            $can_write_review = is_member() && (find_reviewable_order((int)$_SESSION['user']->id, (int)$p->id) !== null);
+            if ($can_write_review): 
+            ?>
                 <a href="<?= base_url('review_add.php?product_id=' . (int)$p->id) ?>" class="btn btn-primary-sm">
                     Write a Review &rarr;
                 </a>
@@ -202,26 +205,26 @@ require_once __DIR__ . '/_head.php';
         </div>
 
         <?php if (empty($reviews)): ?>
-            <p style="color:var(--gray); font-size:14px; text-align:center; padding:30px;">
+            <p class="reviews-empty-text">
                 No customer reviews yet. Be the first verified buyer to leave a review!
             </p>
         <?php else: ?>
-            <div style="display:flex; flex-direction:column; gap:20px;">
+            <div class="reviews-list">
                 <?php foreach ($reviews as $rev): ?>
-                    <div style="border-bottom:1px solid var(--border); padding-bottom:16px;">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                            <div style="display:flex; align-items:center; gap:8px;">
-                                <strong style="color:var(--dark);"><?= encode($rev->reviewer_name) ?></strong>
-                                <span class="role-pill" style="background:#dcfce7; color:#15803d; font-size:10px;">Verified Buyer</span>
+                    <div class="review-item">
+                        <div class="review-header">
+                            <div class="review-author-wrap">
+                                <strong class="review-author-name"><?= encode($rev->reviewer_name) ?></strong>
+                                <span class="role-pill pill-verified-buyer">Verified Buyer</span>
                             </div>
-                            <span style="color:#d97706; font-size:14px;">
+                            <span class="review-stars">
                                 <?= str_repeat('★', (int)$rev->rating) ?><?= str_repeat('☆', 5 - (int)$rev->rating) ?>
                             </span>
                         </div>
-                        <p style="font-size:14px; color:var(--dark-muted); line-height:1.6; margin-bottom:6px;">
+                        <p class="review-content">
                             <?= encode($rev->comment) ?>
                         </p>
-                        <span style="font-size:12px; color:var(--gray);">
+                        <span class="review-timestamp">
                             Reviewed on <?= encode(date('d M Y', strtotime($rev->created_at))) ?>
                         </span>
                     </div>

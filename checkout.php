@@ -2,17 +2,18 @@
 // ============================================================================
 // File: checkout.php
 // Project: sumthin (Tech Gadget Online Store)
-// Module: Shopping Cart (Checkout & Order Creation)
-// Description: Finalize shipping destination, evaluate final financial totals,
-//              atomically record orders & order items, decrement stock, and empty cart.
+// Module: Shopping Cart (Hardened Checkout & Order Creation)
+// Description: Atomically evaluates inventory with SELECT FOR UPDATE, enforces
+//              strict voucher re-validation, verifies address ownership,
+//              creates orders in Pending/Unpaid state, and decrements stock.
 // ============================================================================
 require_once __DIR__ . '/_base.php';
 
 auth('Member');
 
-$user_id = $_SESSION['user']->id;
+$user_id = (int)$_SESSION['user']->id;
 
-// Fetch persistent cart items
+// Fetch persistent cart items for display
 $stmt = $db->prepare('
     SELECT ci.*, p.name, p.price, p.stock 
     FROM `cart_item` ci
@@ -27,25 +28,35 @@ if (empty($cart_items)) {
     redirect(base_url('cart.php'));
 }
 
-// Compute financial figures
+// Compute preview financial figures
 $subtotal = 0;
 foreach ($cart_items as $item) {
-    $subtotal += ($item->price * $item->quantity);
+    $subtotal += ((float)$item->price * (int)$item->quantity);
 }
 
+// Preview Voucher Discount if applicable
 $discount_amount = 0;
-$applied_voucher = $_SESSION['applied_voucher'] ?? null;
-if ($applied_voucher && $subtotal >= $applied_voucher->min_spend) {
-    if ($applied_voucher->discount_type === 'percentage') {
-        $discount_amount = ($subtotal * ($applied_voucher->discount_value / 100));
-        if ($applied_voucher->max_discount) {
-            $discount_amount = min($discount_amount, (float)$applied_voucher->max_discount);
+$applied_code = $_SESSION['applied_voucher'] ?? null;
+$applied_voucher = null;
+
+if ($applied_code && $subtotal > 0) {
+    $v_stmt = $db->prepare('SELECT * FROM `voucher` WHERE `code` = ? AND `is_active` = 1 AND `expires_at` > NOW() LIMIT 1');
+    $v_stmt->execute([$applied_code]);
+    $v_check = $v_stmt->fetch();
+
+    if ($v_check && $v_check->used_count < $v_check->usage_limit && $subtotal >= (float)$v_check->min_spend) {
+        $applied_voucher = $v_check;
+        if ($v_check->discount_type === 'percentage') {
+            $discount_amount = ($subtotal * ((float)$v_check->discount_value / 100));
+            if ($v_check->max_discount) {
+                $discount_amount = min($discount_amount, (float)$v_check->max_discount);
+            }
+        } else {
+            $discount_amount = min($subtotal, (float)$v_check->discount_value);
         }
     } else {
-        $discount_amount = min($subtotal, (float)$applied_voucher->discount_value);
+        unset($_SESSION['applied_voucher']);
     }
-} else {
-    $applied_voucher = null;
 }
 
 $free_shipping_threshold = (float)setting('free_shipping_threshold', '150');
@@ -66,30 +77,23 @@ $city           = 'Kuala Lumpur';
 $state          = 'Wilayah Persekutuan';
 $postal_code    = '';
 $selected_addr  = !empty($saved_addresses) ? $saved_addresses[0]->id : 'new';
-
-$malaysian_states = [
-    'Wilayah Persekutuan' => 'Wilayah Persekutuan (KL / Putrajaya / Labuan)',
-    'Selangor'            => 'Selangor',
-    'Penang'              => 'Penang',
-    'Johor'               => 'Johor',
-    'Perak'               => 'Perak',
-    'Melaka'              => 'Melaka',
-    'Negeri Sembilan'     => 'Negeri Sembilan',
-    'Kedah'               => 'Kedah',
-    'Pahang'              => 'Pahang',
-    'Terengganu'          => 'Terengganu',
-    'Kelantan'            => 'Kelantan',
-    'Sabah'               => 'Sabah',
-    'Sarawak'             => 'Sarawak',
-];
+$payment_method = 'pay_later';
+$malaysian_states = get_malaysian_states();
 
 if (is_post()) {
     verify_csrf();
 
     $address_choice = req('address_choice');
-    $payment_method = req('payment_method', 'online_banking');
+    $payment_method = req('payment_method', 'pay_later');
     $target_address_id = null;
 
+    // 1. Payment Method Validation against strict allowed list
+    $allowed_payment_methods = ['stripe', 'pay_later'];
+    if (!in_array($payment_method, $allowed_payment_methods, true)) {
+        $errors['payment_method'] = 'Please select a valid payment method.';
+    }
+
+    // 2. Address Ownership Verification & Input Validation
     if ($address_choice === 'new' || empty($saved_addresses)) {
         $recipient_name = req('recipient_name');
         $phone          = req('phone');
@@ -99,92 +103,217 @@ if (is_post()) {
         $state          = req('state');
         $postal_code    = req('postal_code');
 
-        if ($recipient_name === '') $errors['recipient_name'] = 'Recipient name is required.';
-        if ($phone === '') {
-            $errors['phone'] = 'Contact phone number is required.';
-        } elseif (!preg_match('/^(\+?6?01)[0-46-9]-*[0-9]{7,8}$/', $phone)) {
-            $errors['phone'] = 'Please enter a valid Malaysian mobile number (e.g. 012-3456789).';
+        if ($err = validate_name($recipient_name, 2, 100)) {
+            $errors['recipient_name'] = $err;
+        }
+        if ($err = validate_phone($phone)) {
+            $errors['phone'] = $err;
         }
         if ($address_line1 === '') $errors['address_line1'] = 'Street address is required.';
         if ($city === '') $errors['city'] = 'City is required.';
         if ($postal_code === '' || !preg_match('/^[0-9]{5}$/', $postal_code)) {
             $errors['postal_code'] = 'Postal code must be 5 digits (e.g. 53300).';
         }
+        if (!array_key_exists($state, $malaysian_states)) {
+            $errors['state'] = 'Please select a valid Malaysian state from the dropdown.';
+        }
     } else {
-        $target_address_id = (int)$address_choice;
+        // Enforce ownership: Verify address belongs strictly to the authenticated user
+        $check_addr = $db->prepare('SELECT `id` FROM `address` WHERE `id` = ? AND `user_id` = ? LIMIT 1');
+        $check_addr->execute([(int)$address_choice, $user_id]);
+        $verified_addr_id = $check_addr->fetchColumn();
+
+        if (!$verified_addr_id) {
+            $errors['address_choice'] = 'Invalid shipping address selected.';
+        } else {
+            $target_address_id = (int)$verified_addr_id;
+        }
     }
 
+    // 3. Process Transactional Checkout
     if (empty($errors)) {
         try {
             $db->beginTransaction();
 
-            // 1. Save new address if selected
-            if ($address_choice === 'new' || empty($saved_addresses)) {
-                $ins_addr = $db->prepare('
-                    INSERT INTO `address` (`user_id`, `recipient_name`, `phone`, `address_line1`, `address_line2`, `city`, `state`, `postal_code`, `is_default`) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
-                ');
-                $ins_addr->execute([$user_id, $recipient_name, $phone, $address_line1, $address_line2, $city, $state, $postal_code]);
-                $target_address_id = (int)$db->lastInsertId();
+            // A. Fetch current user cart items inside transaction
+            $c_stmt = $db->prepare('SELECT `product_id`, `quantity` FROM `cart_item` WHERE `user_id` = ?');
+            $c_stmt->execute([$user_id]);
+            $current_cart = $c_stmt->fetchAll();
+
+            if (empty($current_cart)) {
+                $db->rollBack();
+                set_flash('warning', 'Your shopping cart is empty.');
+                redirect(base_url('cart.php'));
             }
 
-            // 2. Generate unique human-readable order number
-            $order_no = 'ORD-' . date('Ymd') . '-' . strtoupper(bin2hex(random_bytes(3)));
+            // B. Re-read each product with SELECT ... FOR UPDATE and compute live prices
+            $live_subtotal = 0;
+            $order_line_items = [];
+            $prod_lock_stmt = $db->prepare('SELECT `id`, `name`, `price`, `stock` FROM `product` WHERE `id` = ? FOR UPDATE');
 
-            // 3. Create master order record
-            $ins_ord = $db->prepare('
-                INSERT INTO `order` (`order_no`, `user_id`, `address_id`, `total_amount`, `discount_amount`, `final_amount`, `status`, `payment_status`, `tracking_no`) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ');
-            $tracking_no = 'SUM-' . date('Ymd') . '-' . rand(1000, 9999);
-            $ins_ord->execute([
-                $order_no,
-                $user_id,
-                $target_address_id,
-                number_format((float)$subtotal, 2, '.', ''),
-                number_format((float)$discount_amount, 2, '.', ''),
-                number_format((float)$final_total, 2, '.', ''),
-                'Processing',
-                'Paid',
-                $tracking_no
-            ]);
-            $order_id = (int)$db->lastInsertId();
+            foreach ($current_cart as $item) {
+                $prod_lock_stmt->execute([$item->product_id]);
+                $prod = $prod_lock_stmt->fetch();
 
-            // 4. Insert order items & reduce live inventory stock
-            $ins_item = $db->prepare('
-                INSERT INTO `order_item` (`order_id`, `product_id`, `price`, `quantity`, `subtotal`) 
-                VALUES (?, ?, ?, ?, ?)
-            ');
-            $dec_stock = $db->prepare('UPDATE `product` SET `stock` = GREATEST(0, `stock` - ?) WHERE `id` = ?');
+                if (!$prod) {
+                    $db->rollBack();
+                    $errors['order'] = 'A product in your cart is no longer available.';
+                    break;
+                }
 
-            foreach ($cart_items as $ci) {
-                $item_subtotal = $ci->price * $ci->quantity;
-                $ins_item->execute([$order_id, $ci->product_id, $ci->price, $ci->quantity, $item_subtotal]);
-                $dec_stock->execute([$ci->quantity, $ci->product_id]);
+                $req_qty = (int)$item->quantity;
+                $avail_stock = (int)$prod->stock;
+
+                if ($avail_stock < $req_qty) {
+                    $db->rollBack();
+                    $errors['order'] = "Only {$avail_stock} left of {$prod->name}. Please adjust your quantity.";
+                    break;
+                }
+
+                $item_price = (float)$prod->price;
+                $line_subtotal = $item_price * $req_qty;
+                $live_subtotal += $line_subtotal;
+
+                $order_line_items[] = [
+                    'product_id' => (int)$prod->id,
+                    'price'      => $item_price,
+                    'quantity'   => $req_qty,
+                    'subtotal'   => $line_subtotal,
+                ];
             }
 
-            // 5. Update voucher usage if applied
-            if ($applied_voucher) {
-                $v_up = $db->prepare('UPDATE `voucher` SET `used_count` = `used_count` + 1 WHERE `id` = ?');
-                $v_up->execute([$applied_voucher->id]);
-                unset($_SESSION['applied_voucher']);
+            if (!empty($errors['order'])) {
+                // Transaction rolled back above; preserve cart for user adjustment
+            } else {
+                // C. Voucher: Re-fetch and re-validate from database inside transaction
+                $voucher_discount = 0;
+                $voucher_id_to_increment = null;
+                $applied_code = $_SESSION['applied_voucher'] ?? null;
+
+                if ($applied_code) {
+                    $v_lock = $db->prepare('SELECT * FROM `voucher` WHERE `code` = ? FOR UPDATE');
+                    $v_lock->execute([$applied_code]);
+                    $v_row = $v_lock->fetch();
+
+                    $is_valid_v = $v_row 
+                        && (int)$v_row->is_active === 1
+                        && strtotime($v_row->expires_at) > time()
+                        && (int)$v_row->used_count < (int)$v_row->usage_limit
+                        && $live_subtotal >= (float)$v_row->min_spend;
+
+                    if (!$is_valid_v) {
+                        $db->rollBack();
+                        unset($_SESSION['applied_voucher']);
+                        $errors['order'] = "Voucher '{$applied_code}' is invalid, expired, or has reached its redemption limit.";
+                    } else {
+                        $voucher_id_to_increment = (int)$v_row->id;
+                        if ($v_row->discount_type === 'percentage') {
+                            $voucher_discount = ($live_subtotal * ((float)$v_row->discount_value / 100));
+                            if ($v_row->max_discount) {
+                                $voucher_discount = min($voucher_discount, (float)$v_row->max_discount);
+                            }
+                        } else {
+                            $voucher_discount = min($live_subtotal, (float)$v_row->discount_value);
+                        }
+
+                        // Atomic increment of voucher usage
+                        $v_up = $db->prepare('UPDATE `voucher` SET `used_count` = `used_count` + 1 WHERE `id` = ? AND `used_count` < `usage_limit`');
+                        $v_up->execute([$voucher_id_to_increment]);
+
+                        if ($v_up->rowCount() !== 1) {
+                            $db->rollBack();
+                            unset($_SESSION['applied_voucher']);
+                            $errors['order'] = "Voucher '{$applied_code}' has just reached its maximum redemption limit.";
+                        }
+                    }
+                }
+
+                if (empty($errors['order'])) {
+                    // D. Calculate Shipping & Final Payable
+                    $live_shipping_fee = ($live_subtotal >= $free_shipping_threshold) ? 0 : $standard_shipping_fee;
+                    $live_final_total  = max(0, ($live_subtotal - $voucher_discount) + $live_shipping_fee);
+
+                    // E. Save new address if selected
+                    if ($address_choice === 'new' || empty($saved_addresses)) {
+                        $ins_addr = $db->prepare('
+                            INSERT INTO `address` (`user_id`, `recipient_name`, `phone`, `address_line1`, `address_line2`, `city`, `state`, `postal_code`, `is_default`) 
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
+                        ');
+                        $ins_addr->execute([$user_id, $recipient_name, $phone, $address_line1, $address_line2, $city, $state, $postal_code]);
+                        $target_address_id = (int)$db->lastInsertId();
+                    }
+
+                    // F. Generate unique order number
+                    $order_no = 'ORD-' . date('Ymd') . '-' . strtoupper(bin2hex(random_bytes(3)));
+
+                    // G. Create master order record: status 'Pending', payment_status 'Unpaid', tracking_no NULL
+                    $ins_ord = $db->prepare('
+                        INSERT INTO `order` (`order_no`, `user_id`, `address_id`, `total_amount`, `discount_amount`, `final_amount`, `status`, `payment_status`, `tracking_no`) 
+                        VALUES (?, ?, ?, ?, ?, ?, "Pending", "Unpaid", NULL)
+                    ');
+                    $ins_ord->execute([
+                        $order_no,
+                        $user_id,
+                        $target_address_id,
+                        number_format($live_subtotal, 2, '.', ''),
+                        number_format($voucher_discount, 2, '.', ''),
+                        number_format($live_final_total, 2, '.', '')
+                    ]);
+                    $order_id = (int)$db->lastInsertId();
+
+                    // H. Insert order items and atomically decrement inventory stock
+                    $ins_item = $db->prepare('
+                        INSERT INTO `order_item` (`order_id`, `product_id`, `price`, `quantity`, `subtotal`) 
+                        VALUES (?, ?, ?, ?, ?)
+                    ');
+                    $dec_stock = $db->prepare('UPDATE `product` SET `stock` = `stock` - ? WHERE `id` = ? AND `stock` >= ?');
+
+                    foreach ($order_line_items as $line) {
+                        $ins_item->execute([
+                            $order_id,
+                            $line['product_id'],
+                            number_format($line['price'], 2, '.', ''),
+                            $line['quantity'],
+                            number_format($line['subtotal'], 2, '.', '')
+                        ]);
+
+                        $dec_stock->execute([$line['quantity'], $line['product_id'], $line['quantity']]);
+                        if ($dec_stock->rowCount() !== 1) {
+                            throw new Exception("Inventory stock allocation failed for product ID {$line['product_id']}.");
+                        }
+                    }
+
+                    // I. Flush user shopping cart and session voucher
+                    $flush_cart = $db->prepare('DELETE FROM `cart_item` WHERE `user_id` = ?');
+                    $flush_cart->execute([$user_id]);
+                    unset($_SESSION['applied_voucher']);
+
+                    $db->commit();
+
+                    // J. Dispatch e-receipt notification email
+                    if (function_exists('send_mail')) {
+                        $mail_body = "<p>Dear " . encode($_SESSION['user']->name) . ",</p>"
+                            . "<p>Thank you for shopping at sumthin! Your order has been placed successfully.</p>"
+                            . "<ul>"
+                            . "<li><strong>Order Number:</strong> " . encode($order_no) . "</li>"
+                            . "<li><strong>Total Payable:</strong> RM " . number_format($live_final_total, 2) . "</li>"
+                            . "<li><strong>Order Status:</strong> Pending (Unpaid)</li>"
+                            . "<li><strong>Payment Method:</strong> " . ($payment_method === 'stripe' ? 'Stripe Gateway' : 'Pay Later / Bank Transfer') . "</li>"
+                            . "</ul>"
+                            . "<p>We will notify you as soon as your payment is confirmed and parcel dispatched.</p>";
+
+                        send_mail($_SESSION['user']->email, $_SESSION['user']->name, "Order Confirmation - {$order_no}", $mail_body, 'order');
+                    }
+
+                    set_flash('success', "Order placed successfully! Order reference: {$order_no}. Please proceed to payment.");
+                    redirect(base_url('order_detail.php?id=' . $order_id));
+                }
             }
-
-            // 6. Flush permanent cart
-            $flush_cart = $db->prepare('DELETE FROM `cart_item` WHERE `user_id` = ?');
-            $flush_cart->execute([$user_id]);
-
-            // 7. Audit log receipt
-            $receipt_body = "Thank you for shopping at sumthin!\nOrder No: {$order_no}\nTotal Paid: RM " . number_format($final_total, 2) . "\nStatus: Processing\nTracking No: {$tracking_no}";
-            log_email($_SESSION['user']->email, "Order Confirmation - {$order_no}", $receipt_body);
-
-            $db->commit();
-
-            set_flash('success', "Order placed successfully! Order reference: {$order_no}");
-            redirect(base_url('order_detail.php?id=' . $order_id));
         } catch (Exception $e) {
-            $db->rollBack();
-            $errors['order'] = 'Checkout failed: ' . $e->getMessage();
+            if ($db->inTransaction()) {
+                $db->rollBack();
+            }
+            $errors['order'] = app_error_message('Checkout failed. Please try again.', $e);
         }
     }
 }
@@ -193,16 +322,16 @@ $title = 'Checkout';
 require_once __DIR__ . '/_head.php';
 ?>
 
-<div class="container" style="max-width: 1050px;">
+<div class="container container-detail">
     <!-- Title -->
-    <div style="margin-bottom: 24px;">
+    <div class="mb-24">
         <a href="<?= base_url('cart.php') ?>" class="form-link">&larr; Return to Cart</a>
-        <h1 style="font-size:28px; font-weight:800; color:var(--dark); margin-top:6px;">Order Checkout</h1>
-        <p style="font-size:14px; color:var(--gray);">Confirm your delivery address and complete your order.</p>
+        <h1 class="checkout-heading">Order Checkout</h1>
+        <p class="checkout-subheading">Confirm your delivery address and complete your order.</p>
     </div>
 
     <?php if (isset($errors['order'])): ?>
-        <div class="flash-alert flash-error" style="margin-bottom:20px;">
+        <div class="flash-alert flash-error mb-20">
             <div class="flash-icon">✕</div>
             <div class="flash-message"><?= encode($errors['order']) ?></div>
         </div>
@@ -211,30 +340,36 @@ require_once __DIR__ . '/_head.php';
     <form action="<?= base_url('checkout.php') ?>" method="POST" novalidate>
         <?= csrf_field() ?>
 
-        <div style="display:grid; grid-template-columns: 1.6fr 1.1fr; gap:32px; align-items:flex-start;">
+        <div class="checkout-grid">
             <!-- Left: Delivery Address Form -->
-            <div style="background:#fff; border:1px solid var(--border); border-radius:var(--radius); padding:28px; box-shadow:var(--shadow-sm);">
-                <h2 style="font-size:18px; font-weight:800; color:var(--dark); margin-bottom:16px; border-bottom:1px solid var(--border); padding-bottom:10px;">
+            <div class="checkout-section-card">
+                <h2 class="checkout-section-title">
                     1. Shipping Address
                 </h2>
 
+                <?php if (isset($errors['address_choice'])): ?>
+                    <div class="checkout-error-msg">
+                        <?= encode($errors['address_choice']) ?>
+                    </div>
+                <?php endif; ?>
+
                 <?php if (!empty($saved_addresses)): ?>
                     <!-- Saved Addresses Picker -->
-                    <div style="margin-bottom:20px;">
+                    <div class="mb-20">
                         <label class="form-label">Select a Saved Address</label>
                         <?php foreach ($saved_addresses as $sa): ?>
-                            <label style="display:block; padding:12px; border:1px solid var(--border); border-radius:8px; margin-bottom:10px; cursor:pointer;">
+                            <label class="address-choice-item">
                                 <input type="radio" name="address_choice" value="<?= (int)$sa->id ?>" <?= ((string)$selected_addr === (string)$sa->id) ? 'checked' : '' ?>>
-                                <strong style="margin-left:6px;"><?= encode($sa->recipient_name) ?></strong> (<?= encode($sa->phone) ?>)
-                                <div style="font-size:13px; color:var(--dark-muted); margin-left:22px;">
+                                <strong class="ml-6"><?= encode($sa->recipient_name) ?></strong> (<?= encode($sa->phone) ?>)
+                                <div class="address-detail-text">
                                     <?= encode($sa->address_line1) ?><?= $sa->address_line2 ? ', ' . encode($sa->address_line2) : '' ?>, <?= encode($sa->postal_code) ?> <?= encode($sa->city) ?>, <?= encode($sa->state) ?>
                                 </div>
                             </label>
                         <?php endforeach; ?>
 
-                        <label style="display:block; padding:12px; border:1px dashed var(--border-dark); border-radius:8px; cursor:pointer;">
+                        <label class="address-new-choice">
                             <input type="radio" name="address_choice" value="new" <?= ($selected_addr === 'new') ? 'checked' : '' ?>>
-                            <strong style="margin-left:6px;">+ Enter a New Delivery Address</strong>
+                            <strong class="ml-6">+ Enter a New Delivery Address</strong>
                         </label>
                     </div>
                 <?php else: ?>
@@ -242,7 +377,7 @@ require_once __DIR__ . '/_head.php';
                 <?php endif; ?>
 
                 <!-- New Address Fields (Rendered if chosen or no saved address) -->
-                <div id="new-address-fields" style="<?= (!empty($saved_addresses) && $selected_addr !== 'new') ? 'display:none;' : '' ?>">
+                <div id="new-address-fields" class="<?= (!empty($saved_addresses) && $selected_addr !== 'new') ? 'd-none' : '' ?>">
                     <div class="form-group">
                         <label for="recipient_name" class="form-label">Recipient Name *</label>
                         <?= html_text('recipient_name', $recipient_name, ['placeholder' => 'Full Name']) ?>
@@ -266,13 +401,13 @@ require_once __DIR__ . '/_head.php';
                         <?= html_text('address_line2', $address_line2, ['placeholder' => 'Apartment, suite, or area']) ?>
                     </div>
 
-                    <div style="display:flex; gap:16px; flex-wrap:wrap;">
-                        <div class="form-group" style="flex:1;">
+                    <div class="address-row-flex">
+                        <div class="form-group flex-1">
                             <label for="city" class="form-label">City *</label>
                             <?= html_text('city', $city) ?>
                             <?= err('city') ?>
                         </div>
-                        <div class="form-group" style="flex:1;">
+                        <div class="form-group flex-1">
                             <label for="postal_code" class="form-label">Postal Code *</label>
                             <?= html_text('postal_code', $postal_code, ['placeholder' => '53300']) ?>
                             <?= err('postal_code') ?>
@@ -288,96 +423,88 @@ require_once __DIR__ . '/_head.php';
                                 </option>
                             <?php endforeach; ?>
                         </select>
+                        <?= err('state') ?>
                     </div>
                 </div>
 
                 <!-- Payment Selection -->
-                <h2 style="font-size:18px; font-weight:800; color:var(--dark); margin:28px 0 16px 0; border-bottom:1px solid var(--border); padding-bottom:10px;">
+                <h2 class="checkout-section-title mt-28">
                     2. Payment Method
                 </h2>
 
-                <div style="display:flex; flex-direction:column; gap:10px;">
-                    <label style="display:flex; align-items:center; gap:10px; padding:12px; border:1px solid var(--border); border-radius:8px; cursor:pointer;">
-                        <input type="radio" name="payment_method" value="online_banking" checked>
+                <?php if (isset($errors['payment_method'])): ?>
+                    <div class="checkout-error-msg">
+                        <?= encode($errors['payment_method']) ?>
+                    </div>
+                <?php endif; ?>
+
+                <div class="payment-methods-list">
+                    <label class="payment-choice-item">
+                        <input type="radio" name="payment_method" value="pay_later" <?= ($payment_method === 'pay_later') ? 'checked' : '' ?>>
                         <div>
-                            <strong>Instant FPX Online Banking / Card (Simulation)</strong>
-                            <div style="font-size:12px; color:var(--gray);">Direct instant confirmation for live academic demo.</div>
+                            <strong>Pay Later / Cash on Delivery / Bank Transfer</strong>
+                            <div class="payment-desc-text">Manual confirmation and bank transfer option for demo.</div>
                         </div>
                     </label>
 
-                    <label style="display:flex; align-items:center; gap:10px; padding:12px; border:1px solid var(--border); border-radius:8px; cursor:pointer;">
-                        <input type="radio" name="payment_method" value="stripe">
+                    <label class="payment-choice-item">
+                        <input type="radio" name="payment_method" value="stripe" <?= ($payment_method === 'stripe') ? 'checked' : '' ?>>
                         <div>
-                            <strong>Stripe API Gateway (Test Mode)</strong>
-                            <div style="font-size:12px; color:var(--gray);">Integrated with Stripe test sandbox via plain cURL.</div>
+                            <strong>Stripe Card Payment (Test Mode)</strong>
+                            <div class="payment-desc-text">Secure checkout via Stripe payment gateway.</div>
                         </div>
                     </label>
                 </div>
             </div>
 
             <!-- Right: Order Summary Confirmation -->
-            <div style="background:#fff; border:1px solid var(--border); border-radius:var(--radius); padding:24px; box-shadow:var(--shadow-sm);">
-                <h2 style="font-size:18px; font-weight:800; color:var(--dark); margin-bottom:16px; border-bottom:1px solid var(--border); padding-bottom:10px;">
+            <div class="checkout-summary-card">
+                <h2 class="checkout-section-title">
                     Review Order (<?= count($cart_items) ?> Items)
                 </h2>
 
-                <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:20px; max-height:220px; overflow-y:auto; padding-right:6px;">
+                <div class="checkout-items-scroll">
                     <?php foreach ($cart_items as $ci): ?>
-                        <div style="display:flex; justify-content:space-between; font-size:13px;">
+                        <div class="checkout-item-line">
                             <div>
                                 <strong><?= encode($ci->name) ?></strong>
-                                <div style="color:var(--gray); font-size:12px;">Qty: <?= (int)$ci->quantity ?> &times; RM <?= number_format((float)$ci->price, 2) ?></div>
+                                <div class="checkout-item-meta">Qty: <?= (int)$ci->quantity ?> &times; RM <?= number_format((float)$ci->price, 2) ?></div>
                             </div>
-                            <span style="font-weight:700;">RM <?= number_format((float)($ci->price * $ci->quantity), 2) ?></span>
+                            <span class="fw-700">RM <?= number_format((float)($ci->price * $ci->quantity), 2) ?></span>
                         </div>
                     <?php endforeach; ?>
                 </div>
 
-                <div style="border-top:1px solid var(--border); padding-top:14px; display:flex; flex-direction:column; gap:8px; font-size:14px; margin-bottom:20px;">
-                    <div style="display:flex; justify-content:space-between;">
-                        <span style="color:var(--gray);">Subtotal:</span>
+                <div class="checkout-totals-block">
+                    <div class="flex-between">
+                        <span class="text-muted">Subtotal:</span>
                         <strong>RM <?= number_format((float)$subtotal, 2) ?></strong>
                     </div>
 
                     <?php if ($discount_amount > 0): ?>
-                        <div style="display:flex; justify-content:space-between; color:var(--success);">
-                            <span>Voucher Discount (<?= encode($applied_voucher->code) ?>):</span>
+                        <div class="flex-between text-success">
+                            <span>Voucher Discount (<?= encode($applied_voucher->code ?? '') ?>):</span>
                             <strong>- RM <?= number_format((float)$discount_amount, 2) ?></strong>
                         </div>
                     <?php endif; ?>
 
-                    <div style="display:flex; justify-content:space-between;">
-                        <span style="color:var(--gray);">Express Delivery:</span>
-                        <span><?= ($shipping_fee == 0) ? '<strong style="color:var(--success);">FREE</strong>' : 'RM ' . number_format($standard_shipping_fee, 2) ?></span>
+                    <div class="flex-between">
+                        <span class="text-muted">Express Delivery:</span>
+                        <span><?= ($shipping_fee == 0) ? '<strong class="text-success">FREE</strong>' : 'RM ' . number_format($standard_shipping_fee, 2) ?></span>
                     </div>
 
-                    <div style="display:flex; justify-content:space-between; font-size:18px; font-weight:900; margin-top:8px; border-top:1px solid var(--border); padding-top:10px;">
+                    <div class="checkout-grand-total-row">
                         <span>Total Payable:</span>
-                        <span style="color:var(--primary);">RM <?= number_format((float)$final_total, 2) ?></span>
+                        <span class="text-primary">RM <?= number_format((float)$final_total, 2) ?></span>
                     </div>
                 </div>
 
-                <button type="submit" class="btn btn-primary btn-block" style="padding:14px; font-size:16px;">
-                    Authorize Payment & Place Order &rarr;
+                <button type="submit" class="btn btn-primary btn-block btn-place-order">
+                    Place Order &rarr;
                 </button>
             </div>
         </div>
     </form>
 </div>
-
-<script>
-// jQuery helper to toggle new address input box visibility
-document.addEventListener('DOMContentLoaded', function() {
-    var radios = document.querySelectorAll('input[name="address_choice"]');
-    var newBox = document.getElementById('new-address-fields');
-    if (radios && newBox) {
-        radios.forEach(function(r) {
-            r.addEventListener('change', function() {
-                newBox.style.display = (this.value === 'new') ? 'block' : 'none';
-            });
-        });
-    }
-});
-</script>
 
 <?php require_once __DIR__ . '/_foot.php'; ?>

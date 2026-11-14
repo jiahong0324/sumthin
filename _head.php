@@ -73,16 +73,16 @@ $user         = current_user();
                 <?php if (is_logged_in()): ?>
                     <?php if (is_member()): ?>
                         <!-- Shopping Cart Link with Counter -->
-                        <a href="<?= base_url('cart.php') ?>" class="btn btn-outline-sm <?= $current_page === 'cart.php' ? 'active' : '' ?>" style="display:inline-flex; align-items:center; gap:6px;">
+                        <a href="<?= base_url('cart.php') ?>" class="btn btn-outline-sm nav-cart-btn <?= $current_page === 'cart.php' ? 'active' : '' ?>">
                             <span>🛒 Cart</span>
                             <?php $cc = cart_count(); if ($cc > 0): ?>
-                                <span style="background:var(--primary); color:#fff; font-size:11px; font-weight:800; padding:1px 6px; border-radius:10px;"><?= $cc ?></span>
+                                <span class="cart-badge"><?= $cc ?></span>
                             <?php endif; ?>
                         </a>
                     <?php endif; ?>
 
                     <div class="user-menu-wrapper">
-                        <a href="<?= base_url('profile.php') ?>" class="nav-link" style="font-size:14px; display:inline-flex; align-items:center; gap:6px;" title="Account Profile & Settings">
+                        <a href="<?= base_url('profile.php') ?>" class="nav-link user-profile-link" title="Account Profile & Settings">
                             <span>Hi, <strong><?= encode($user->name) ?></strong></span>
                         </a>
                         <span class="role-pill <?= is_admin() ? 'pill-admin' : 'pill-member' ?>">

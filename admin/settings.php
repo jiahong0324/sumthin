@@ -53,7 +53,7 @@ if (is_post()) {
             redirect(base_url('admin/settings.php'));
         } catch (Exception $e) {
             $db->rollBack();
-            $errors['db'] = 'Failed to save settings: ' . $e->getMessage();
+            $errors['db'] = app_error_message('Failed to save settings. Please try again.', $e);
         }
     }
 }

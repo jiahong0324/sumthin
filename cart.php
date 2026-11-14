@@ -22,16 +22,17 @@ if (is_post() && req('voucher_action') !== '') {
         if ($code === '') {
             set_flash('error', 'Please enter a voucher code.');
         } else {
-            $stmt = $db->prepare('SELECT * FROM `voucher` WHERE `code` = ? AND `expires_at` > NOW() LIMIT 1');
+            $stmt = $db->prepare('SELECT * FROM `voucher` WHERE `code` = ? AND `is_active` = 1 AND `expires_at` > NOW() LIMIT 1');
             $stmt->execute([$code]);
             $voucher = $stmt->fetch();
 
             if ($voucher && $voucher->used_count < $voucher->usage_limit) {
-                $_SESSION['applied_voucher'] = $voucher;
+                // Store only voucher code in session per security hardening rules
+                $_SESSION['applied_voucher'] = $voucher->code;
                 set_flash('success', "Voucher '{$voucher->code}' applied successfully!");
             } else {
                 unset($_SESSION['applied_voucher']);
-                set_flash('error', 'Invalid or expired voucher code.');
+                set_flash('error', 'Invalid, expired, inactive, or fully redeemed voucher code.');
             }
         }
     } elseif ($v_action === 'remove') {
@@ -62,26 +63,38 @@ foreach ($cart_items as $item) {
     $subtotal += ($item->price * $item->quantity);
 }
 
-// Evaluate Voucher Discount if applicable
+// Evaluate Voucher Discount if applicable (Store only code, re-validate from DB)
 $discount_amount = 0;
-$applied_voucher = $_SESSION['applied_voucher'] ?? null;
+$applied_code = $_SESSION['applied_voucher'] ?? null;
+$applied_voucher = null;
 
-if ($applied_voucher && $subtotal > 0) {
-    if ($subtotal < $applied_voucher->min_spend) {
-        $min_spend = number_format($applied_voucher->min_spend, 2);
-        set_flash('warning', "Voucher '{$applied_voucher->code}' requires a minimum spend of RM {$min_spend}.");
-        unset($_SESSION['applied_voucher']);
-        $applied_voucher = null;
-    } else {
-        if ($applied_voucher->discount_type === 'percentage') {
-            $discount_amount = ($subtotal * ($applied_voucher->discount_value / 100));
-            if ($applied_voucher->max_discount) {
-                $discount_amount = min($discount_amount, (float)$applied_voucher->max_discount);
-            }
+if ($applied_code && $subtotal > 0) {
+    $v_stmt = $db->prepare('SELECT * FROM `voucher` WHERE `code` = ? AND `is_active` = 1 AND `expires_at` > NOW() LIMIT 1');
+    $v_stmt->execute([$applied_code]);
+    $voucher = $v_stmt->fetch();
+
+    if ($voucher && $voucher->used_count < $voucher->usage_limit) {
+        if ($subtotal < (float)$voucher->min_spend) {
+            $min_spend = number_format((float)$voucher->min_spend, 2);
+            set_flash('warning', "Voucher '{$voucher->code}' requires a minimum spend of RM {$min_spend}.");
+            unset($_SESSION['applied_voucher']);
         } else {
-            $discount_amount = min($subtotal, (float)$applied_voucher->discount_value);
+            $applied_voucher = $voucher;
+            if ($voucher->discount_type === 'percentage') {
+                $discount_amount = ($subtotal * ((float)$voucher->discount_value / 100));
+                if ($voucher->max_discount) {
+                    $discount_amount = min($discount_amount, (float)$voucher->max_discount);
+                }
+            } else {
+                $discount_amount = min($subtotal, (float)$voucher->discount_value);
+            }
         }
+    } else {
+        unset($_SESSION['applied_voucher']);
+        set_flash('warning', 'The previously applied voucher is inactive, expired, or fully redeemed.');
     }
+} else {
+    unset($_SESSION['applied_voucher']);
 }
 
 // Shipping calculation (Dynamic settings from store configuration)
@@ -94,79 +107,79 @@ $title = 'My Shopping Cart';
 require_once __DIR__ . '/_head.php';
 ?>
 
-<div class="container" style="max-width: 1050px;">
+<div class="container container-detail">
     <!-- Title -->
-    <div style="margin-bottom: 24px;">
-        <h1 style="font-size:28px; font-weight:800; color:var(--dark);">Your Shopping Cart</h1>
-        <p style="font-size:14px; color:var(--gray);">Review your tech gadgets, apply discount vouchers, and proceed to checkout.</p>
+    <div class="mb-24">
+        <h1 class="cart-title">Your Shopping Cart</h1>
+        <p class="cart-subtitle">Review your tech gadgets, apply discount vouchers, and proceed to checkout.</p>
     </div>
 
     <?php if (empty($cart_items)): ?>
         <!-- Empty Cart State -->
-        <div style="background:#fff; border:1px solid var(--border); border-radius:var(--radius-lg); padding:60px 20px; text-align:center; box-shadow:var(--shadow-sm);">
-            <div style="font-size:48px; margin-bottom:12px;">🛒</div>
-            <h2 style="font-size:20px; font-weight:800; color:var(--dark); margin-bottom:8px;">Your cart is currently empty</h2>
-            <p style="font-size:14px; color:var(--gray); margin-bottom:24px;">Browse our curated collection of power banks, mechanical keyboards, and precision gear.</p>
+        <div class="cart-empty-panel">
+            <div class="empty-state-icon">🛒</div>
+            <h2 class="empty-state-title">Your cart is currently empty</h2>
+            <p class="empty-state-desc">Browse our curated collection of power banks, mechanical keyboards, and precision gear.</p>
             <a href="<?= base_url('index.php') ?>" class="btn btn-primary">Browse sumthin Catalog &rarr;</a>
         </div>
     <?php else: ?>
         <!-- Cart Active Grid -->
-        <div style="display:grid; grid-template-columns: 2fr 1.1fr; gap:32px; align-items:flex-start;">
+        <div class="cart-grid">
             <!-- Left: Cart Items Table -->
-            <div style="background:#fff; border:1px solid var(--border); border-radius:var(--radius); padding:24px; box-shadow:var(--shadow-sm);">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid var(--border); padding-bottom:12px;">
-                    <span style="font-weight:700; color:var(--dark);"><?= count($cart_items) ?> Distinct Item(s) in Cart</span>
-                    <form action="<?= base_url('cart_action.php') ?>" method="POST" style="display:inline;">
+            <div class="cart-items-card">
+                <div class="cart-items-header">
+                    <span class="cart-items-count"><?= count($cart_items) ?> Distinct Item(s) in Cart</span>
+                    <form action="<?= base_url('cart_action.php') ?>" method="POST" class="d-inline">
                         <?= csrf_field() ?>
                         <input type="hidden" name="action" value="clear">
-                        <button type="submit" class="btn btn-outline-sm" style="color:var(--error); border-color:#fca5a5; font-size:11px;" data-confirm="Empty your entire shopping cart?">
+                        <button type="submit" class="btn btn-outline-sm btn-clear-cart" data-confirm="Empty your entire shopping cart?">
                             Clear Cart
                         </button>
                     </form>
                 </div>
 
-                <div style="display:flex; flex-direction:column; gap:20px;">
+                <div class="cart-items-list">
                     <?php foreach ($cart_items as $item): ?>
-                        <div style="display:flex; gap:16px; align-items:center; border-bottom:1px solid #f1f5f9; padding-bottom:16px;">
+                        <div class="cart-item-row">
                             <!-- Photo -->
-                            <div style="width:72px; height:72px; background:#0b0f19; border-radius:8px; overflow:hidden; flex-shrink:0; display:flex; align-items:center; justify-content:center; border:1px solid #1e293b;">
-                                <img src="<?= base_url('uploads/products/' . encode($item->photo_url)) ?>" alt="<?= encode($item->name) ?>" style="max-width:100%; max-height:100%; object-fit:contain;">
+                            <div class="cart-item-thumb">
+                                <img src="<?= base_url('uploads/products/' . encode($item->photo_url)) ?>" alt="<?= encode($item->name) ?>" class="cart-item-img">
                             </div>
 
                             <!-- Details -->
-                            <div style="flex:1;">
-                                <span style="font-size:11px; text-transform:uppercase; font-weight:700; color:var(--primary);"><?= encode($item->category_name) ?></span>
-                                <h3 style="font-size:15px; font-weight:700; color:var(--dark); margin:2px 0 4px 0;">
-                                    <a href="<?= base_url('product.php?id=' . (int)$item->product_id) ?>" style="text-decoration:none; color:inherit;">
+                            <div class="cart-item-info">
+                                <span class="cart-item-category"><?= encode($item->category_name) ?></span>
+                                <h3 class="cart-item-title">
+                                    <a href="<?= base_url('product.php?id=' . (int)$item->product_id) ?>" class="product-title-link">
                                         <?= encode($item->name) ?>
                                     </a>
                                 </h3>
-                                <div style="font-size:13px; color:var(--gray);">
+                                <div class="cart-item-unit-price">
                                     RM <?= number_format((float)$item->price, 2) ?> each
                                 </div>
                             </div>
 
                             <!-- Quantity Selector Form -->
                             <div>
-                                <form action="<?= base_url('cart_action.php') ?>" method="POST" style="display:flex; align-items:center; gap:6px;">
+                                <form action="<?= base_url('cart_action.php') ?>" method="POST" class="cart-qty-form">
                                     <?= csrf_field() ?>
                                     <input type="hidden" name="action" value="update">
                                     <input type="hidden" name="cart_id" value="<?= (int)$item->cart_id ?>">
-                                    <input type="number" name="quantity" value="<?= (int)$item->quantity ?>" min="1" max="<?= min(10, (int)$item->stock) ?>" class="form-control" style="width:65px; text-align:center; padding:6px;">
-                                    <button type="submit" class="btn btn-outline-sm" style="padding:6px 10px; font-size:12px;" title="Update quantity">✓</button>
+                                    <input type="number" name="quantity" value="<?= (int)$item->quantity ?>" min="1" max="<?= min(10, (int)$item->stock) ?>" class="form-control cart-qty-input">
+                                    <button type="submit" class="btn btn-outline-sm btn-qty-update" title="Update quantity">✓</button>
                                 </form>
                             </div>
 
                             <!-- Subtotal & Remove -->
-                            <div style="text-align:right; min-width:90px;">
-                                <div style="font-size:16px; font-weight:800; color:var(--dark);">
+                            <div class="cart-item-subtotal-col">
+                                <div class="cart-item-subtotal">
                                     RM <?= number_format((float)($item->price * $item->quantity), 2) ?>
                                 </div>
-                                <form action="<?= base_url('cart_action.php') ?>" method="POST" style="margin-top:6px;">
+                                <form action="<?= base_url('cart_action.php') ?>" method="POST" class="mt-6">
                                     <?= csrf_field() ?>
                                     <input type="hidden" name="action" value="remove">
                                     <input type="hidden" name="cart_id" value="<?= (int)$item->cart_id ?>">
-                                    <button type="submit" style="background:transparent; border:none; color:var(--error); font-size:12px; cursor:pointer;" data-confirm="Remove this item?">
+                                    <button type="submit" class="btn-remove-item" data-confirm="Remove this item?">
                                         &times; Remove
                                     </button>
                                 </form>
@@ -175,60 +188,60 @@ require_once __DIR__ . '/_head.php';
                     <?php endforeach; ?>
                 </div>
 
-                <div style="margin-top:16px;">
+                <div class="mt-16">
                     <a href="<?= base_url('index.php') ?>" class="form-link">&larr; Continue Shopping</a>
                 </div>
             </div>
 
             <!-- Right: Order Summary Card -->
-            <div style="background:#fff; border:1px solid var(--border); border-radius:var(--radius); padding:24px; box-shadow:var(--shadow-sm);">
-                <h2 style="font-size:18px; font-weight:800; color:var(--dark); margin-bottom:16px; border-bottom:1px solid var(--border); padding-bottom:10px;">
+            <div class="cart-summary-card">
+                <h2 class="cart-summary-heading">
                     Order Summary
                 </h2>
 
                 <!-- Voucher Code Box -->
-                <div style="margin-bottom:20px; background:#f8fafc; border:1px dashed var(--border-dark); border-radius:var(--radius-sm); padding:14px;">
-                    <span style="font-size:12px; font-weight:700; color:var(--dark); display:block; margin-bottom:6px;">
+                <div class="cart-voucher-box">
+                    <span class="cart-voucher-label">
                         Have a Discount Voucher?
                     </span>
                     <?php if ($applied_voucher): ?>
-                        <div style="display:flex; justify-content:space-between; align-items:center; background:#dcfce7; padding:8px 12px; border-radius:6px; font-size:12px; color:#15803d; font-weight:700;">
+                        <div class="voucher-applied-pill">
                             <span>Applied: <?= encode($applied_voucher->code) ?></span>
-                            <form action="<?= base_url('cart.php') ?>" method="POST" style="display:inline;">
+                            <form action="<?= base_url('cart.php') ?>" method="POST" class="d-inline">
                                 <?= csrf_field() ?>
                                 <input type="hidden" name="voucher_action" value="remove">
-                                <button type="submit" style="background:transparent; border:none; color:#b91c1c; font-size:12px; cursor:pointer; font-weight:700;">&times; Remove</button>
+                                <button type="submit" class="btn-voucher-remove">&times; Remove</button>
                             </form>
                         </div>
                     <?php else: ?>
-                        <form action="<?= base_url('cart.php') ?>" method="POST" style="display:flex; gap:8px;">
+                        <form action="<?= base_url('cart.php') ?>" method="POST" class="voucher-form">
                             <?= csrf_field() ?>
                             <input type="hidden" name="voucher_action" value="apply">
-                            <input type="text" name="voucher_code" placeholder="e.g. SUMTHIN10" class="form-control" style="font-size:12px; text-transform:uppercase; padding:6px 10px;">
-                            <button type="submit" class="btn btn-outline-sm" style="font-size:12px; padding:6px 12px;">Apply</button>
+                            <input type="text" name="voucher_code" placeholder="e.g. SUMTHIN10" class="form-control voucher-input">
+                            <button type="submit" class="btn btn-outline-sm btn-voucher-apply">Apply</button>
                         </form>
-                        <span style="font-size:11px; color:var(--gray); margin-top:4px; display:block;">Try demo codes: <code>SUMTHIN10</code> or <code>TECHSAVE30</code></span>
+                        <span class="voucher-hint">Try demo codes: <code>SUMTHIN10</code> or <code>TECHSAVE30</code></span>
                     <?php endif; ?>
                 </div>
 
                 <!-- Price Breakdown Table -->
-                <div style="display:flex; flex-direction:column; gap:10px; font-size:14px; margin-bottom:20px; border-bottom:1px solid var(--border); padding-bottom:16px;">
-                    <div style="display:flex; justify-content:space-between;">
-                        <span style="color:var(--gray);">Items Subtotal:</span>
+                <div class="cart-breakdown-list">
+                    <div class="flex-between">
+                        <span class="text-muted">Items Subtotal:</span>
                         <strong>RM <?= number_format((float)$subtotal, 2) ?></strong>
                     </div>
 
                     <?php if ($discount_amount > 0): ?>
-                        <div style="display:flex; justify-content:space-between; color:var(--success);">
+                        <div class="flex-between text-success">
                             <span>Voucher Savings:</span>
                             <strong>- RM <?= number_format((float)$discount_amount, 2) ?></strong>
                         </div>
                     <?php endif; ?>
 
-                    <div style="display:flex; justify-content:space-between;">
-                        <span style="color:var(--gray);">Shipping:</span>
+                    <div class="flex-between">
+                        <span class="text-muted">Shipping:</span>
                         <?php if ($shipping_fee == 0): ?>
-                            <span style="color:var(--success); font-weight:700;">FREE (Orders &ge; RM <?= number_format($free_shipping_threshold, 0) ?>)</span>
+                            <span class="shipping-free-text">FREE (Orders &ge; RM <?= number_format($free_shipping_threshold, 0) ?>)</span>
                         <?php else: ?>
                             <span>RM <?= number_format($standard_shipping_fee, 2) ?></span>
                         <?php endif; ?>
@@ -236,15 +249,15 @@ require_once __DIR__ . '/_head.php';
                 </div>
 
                 <!-- Grand Total -->
-                <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:24px;">
-                    <span style="font-size:16px; font-weight:800; color:var(--dark);">Estimated Total:</span>
-                    <span style="font-size:26px; font-weight:900; color:var(--primary);">
+                <div class="cart-total-row">
+                    <span class="cart-total-label">Estimated Total:</span>
+                    <span class="cart-total-val">
                         RM <?= number_format((float)$final_total, 2) ?>
                     </span>
                 </div>
 
                 <!-- Checkout CTA -->
-                <a href="<?= base_url('checkout.php') ?>" class="btn btn-primary btn-block" style="padding:12px; font-size:15px;">
+                <a href="<?= base_url('checkout.php') ?>" class="btn btn-primary btn-block btn-checkout-cta">
                     Proceed to Checkout &rarr;
                 </a>
             </div>

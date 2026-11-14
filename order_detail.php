@@ -31,38 +31,13 @@ if (!$o) {
 if (is_post() && req('action') === 'cancel') {
     verify_csrf();
 
-    if ($o->status === 'Processing' || $o->status === 'Pending') {
-        try {
-            $db->beginTransaction();
-
-            // 1. Mark order as Cancelled
-            $up = $db->prepare("UPDATE `order` SET `status` = 'Cancelled', `payment_status` = 'Refunded' WHERE `id` = ?");
-            $up->execute([$order_id]);
-
-            // 2. Restore inventory quantities back to products
-            $items_stmt = $db->prepare('SELECT `product_id`, `quantity` FROM `order_item` WHERE `order_id` = ?');
-            $items_stmt->execute([$order_id]);
-            $cancel_items = $items_stmt->fetchAll();
-
-            $restore_stmt = $db->prepare('UPDATE `product` SET `stock` = `stock` + ? WHERE `id` = ?');
-            foreach ($cancel_items as $ci) {
-                $restore_stmt->execute([$ci->quantity, $ci->product_id]);
-            }
-
-            // 3. Log audit notification
-            log_email($_SESSION['user']->email, "Order Cancelled - {$o->order_no}", "Your order {$o->order_no} has been cancelled and refunded.");
-
-            $db->commit();
-
-            set_flash('info', "Order {$o->order_no} has been cancelled successfully. Your payment will be refunded.");
-            redirect(base_url('order_detail.php?id=' . $order_id));
-        } catch (Exception $e) {
-            $db->rollBack();
-            set_flash('error', 'Cancellation failed: ' . $e->getMessage());
-        }
+    $cancel_res = cancel_order($order_id, $user_id, 'Member');
+    if ($cancel_res['ok']) {
+        set_flash('info', $cancel_res['message']);
     } else {
-        set_flash('warning', 'Orders that have already been shipped or delivered cannot be cancelled.');
+        set_flash('error', $cancel_res['message']);
     }
+    redirect(base_url('order_detail.php?id=' . $order_id));
 }
 
 // Fetch order items with product details and primary photos
@@ -103,7 +78,7 @@ require_once __DIR__ . '/_head.php';
                 <form action="<?= base_url('order_detail.php?id=' . $order_id) ?>" method="POST" style="display:inline;">
                     <?= csrf_field() ?>
                     <input type="hidden" name="action" value="cancel">
-                    <button type="submit" class="btn btn-outline-sm" style="color:var(--error); border-color:#fca5a5;" data-confirm="Cancel this order? Stock will be restored and payment refunded.">
+                    <button type="submit" class="btn btn-outline-sm" style="color:var(--error); border-color:#fca5a5;" data-confirm="Are you sure you want to cancel this order? Stock will be restored.">
                         Cancel Order
                     </button>
                 </form>
@@ -153,6 +128,20 @@ require_once __DIR__ . '/_head.php';
                             <div style="font-size:12px; color:var(--gray);">
                                 Qty: <?= (int)$item->quantity ?> &times; RM <?= number_format((float)$item->price, 2) ?>
                             </div>
+                            <?php if ($o->status === 'Delivered'): ?>
+                                <?php
+                                $rev_chk = $db->prepare('SELECT id FROM review WHERE user_id = ? AND product_id = ? AND order_id = ? LIMIT 1');
+                                $rev_chk->execute([$user->id, $item->product_id, $id]);
+                                $already_reviewed = (bool)$rev_chk->fetch();
+                                ?>
+                                <div style="margin-top:6px;">
+                                    <?php if ($already_reviewed): ?>
+                                        <span style="display:inline-block; font-size:11px; font-weight:700; color:var(--success); background:#ecfdf5; padding:2px 8px; border-radius:4px; border:1px solid #a7f3d0;">✓ Reviewed</span>
+                                    <?php else: ?>
+                                        <a href="<?= base_url('review_add.php?product_id=' . (int)$item->product_id) ?>" class="btn btn-outline-sm" style="font-size:11px; padding:3px 8px; text-decoration:none; display:inline-block;">★ Write Review</a>
+                                    <?php endif; ?>
+                                </div>
+                            <?php endif; ?>
                         </div>
                         <div style="font-weight:800; color:var(--dark); font-size:15px;">
                             RM <?= number_format((float)$item->subtotal, 2) ?>

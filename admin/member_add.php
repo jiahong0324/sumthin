@@ -26,11 +26,9 @@ if (is_post()) {
     $password         = req('password');
     $confirm_password = req('confirm_password');
 
-    // 1. Text validations
-    if ($name === '') {
-        $errors['name'] = 'Full name is required.';
-    } elseif (strlen($name) < 3 || strlen($name) > 100) {
-        $errors['name'] = 'Full name must be between 3 and 100 characters.';
+    // 1. Text validations using reusable helpers
+    if ($err = validate_name($name, 3, 100)) {
+        $errors['name'] = $err;
     }
 
     if ($email === '') {
@@ -45,20 +43,16 @@ if (is_post()) {
         }
     }
 
-    if ($phone !== '' && !preg_match('/^(\+?6?01)[0-46-9]-*[0-9]{7,8}$/', $phone)) {
-        $errors['phone'] = 'Please enter a valid Malaysian mobile number (e.g. 012-3456789).';
+    if ($phone !== '' && ($err = validate_phone($phone))) {
+        $errors['phone'] = $err;
     }
 
     if (!in_array($role, ['Admin', 'Member'], true)) {
         $errors['role'] = 'Invalid account role selected.';
     }
 
-    if ($password === '') {
-        $errors['password'] = 'Initial password is required.';
-    } elseif (strlen($password) < 8) {
-        $errors['password'] = 'Password must be at least 8 characters long.';
-    } elseif (!preg_match('/[A-Z]/', $password) || !preg_match('/[a-z]/', $password) || !preg_match('/[0-9]/', $password)) {
-        $errors['password'] = 'Password must include uppercase, lowercase, and numeric characters.';
+    if ($err = validate_password($password)) {
+        $errors['password'] = $err;
     }
 
     if ($confirm_password === '') {
@@ -67,39 +61,14 @@ if (is_post()) {
         $errors['confirm_password'] = 'Passwords do not match.';
     }
 
-    // 2. Optional Profile Photo Upload
+    // 2. Optional Profile Photo Upload via reusable helper
     $photo_filename = 'default_user.png';
-    if (isset($_FILES['photo']) && $_FILES['photo']['error'] !== UPLOAD_ERR_NO_FILE) {
-        if ($_FILES['photo']['error'] !== UPLOAD_ERR_OK) {
-            $errors['photo'] = 'File upload error (Code: ' . $_FILES['photo']['error'] . ').';
-        } else {
-            $file = $_FILES['photo'];
-            $max_size = 2 * 1024 * 1024; // 2MB
-            $allowed_exts  = ['jpg', 'jpeg', 'png', 'webp'];
-            $allowed_mimes = ['image/jpeg', 'image/png', 'image/webp'];
-
-            $file_ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-
-            if ($file['size'] > $max_size) {
-                $errors['photo'] = 'Photo file size cannot exceed 2 MB.';
-            } elseif (!in_array($file_ext, $allowed_exts, true)) {
-                $errors['photo'] = 'Allowed file formats: JPG, JPEG, PNG, WEBP.';
-            } else {
-                $finfo = finfo_open(FILEINFO_MIME_TYPE);
-                $mime_type = finfo_file($finfo, $file['tmp_name']);
-                finfo_close($finfo);
-
-                if (!in_array($mime_type, $allowed_mimes, true)) {
-                    $errors['photo'] = 'Invalid image content detected.';
-                } else {
-                    $photo_filename = 'user_' . bin2hex(random_bytes(8)) . '.' . $file_ext;
-                    $dest = __DIR__ . '/../uploads/members/' . $photo_filename;
-                    if (!move_uploaded_file($file['tmp_name'], $dest)) {
-                        $errors['photo'] = 'Failed to save avatar photo to disk.';
-                    }
-                }
-            }
-        }
+    $photo_err = null;
+    $uploaded_photo = save_uploaded_image('photo', 'members', 'user', $photo_err, 2);
+    if ($photo_err) {
+        $errors['photo'] = $photo_err;
+    } elseif ($uploaded_photo) {
+        $photo_filename = $uploaded_photo;
     }
 
     // 3. Database Insertion
