@@ -121,4 +121,68 @@ $(document).ready(function() {
     $(document).on('click', '.btn-action-addcart', function() {
         $('#shopee-buy-now-input').val('0');
     });
+
+    // 11. Smooth horizontal mouse-wheel scrolling for category pills
+    $('.category-scroll-list').on('wheel', function(e) {
+        if (e.originalEvent.deltaY !== 0) {
+            e.preventDefault();
+            this.scrollBy({
+                left: e.originalEvent.deltaY * 1.5,
+                behavior: 'smooth'
+            });
+        }
+    });
+
+    // 12. Smooth in-page anchor scrolling with sticky header offset
+    $(document).on('click', 'a[href^="#"]', function(e) {
+        var targetHash = $(this).attr('href');
+        if (targetHash && targetHash.length > 1) {
+            var $target = $(targetHash);
+            if ($target.length) {
+                e.preventDefault();
+                var headerHeight = $('.site-header').outerHeight() || 72;
+                var targetTop = $target.offset().top - headerHeight - 16;
+                $('html, body').stop().animate({
+                    scrollTop: Math.max(0, targetTop)
+                }, 350);
+
+                if (history.pushState) {
+                    history.pushState(null, null, targetHash);
+                }
+            }
+        }
+    });
+
+    // 13. Smooth scroll adjustment for hash on initial page load
+    if (window.location.hash) {
+        var $hashTarget = $(window.location.hash);
+        if ($hashTarget.length) {
+            setTimeout(function() {
+                var headerHeight = $('.site-header').outerHeight() || 72;
+                var targetTop = $hashTarget.offset().top - headerHeight - 16;
+                $('html, body').stop().animate({
+                    scrollTop: Math.max(0, targetTop)
+                }, 350);
+            }, 150);
+        }
+    }
+
+    // 14. Smooth Floating Back to Top Button
+    var $backToTop = $('#btn-back-to-top');
+    if (!$backToTop.length) {
+        $backToTop = $('<button type="button" id="btn-back-to-top" class="btn-back-to-top" title="Scroll to Top" aria-label="Scroll to top">&#8593;</button>').appendTo('body');
+    }
+
+    $(window).on('scroll', function() {
+        if ($(this).scrollTop() > 300) {
+            $backToTop.addClass('show');
+        } else {
+            $backToTop.removeClass('show');
+        }
+    });
+
+    $backToTop.on('click', function(e) {
+        e.preventDefault();
+        $('html, body').stop().animate({ scrollTop: 0 }, 350);
+    });
 });

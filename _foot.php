@@ -56,6 +56,9 @@
         </div>
     </footer>
 
+    <!-- Floating Back to Top Button -->
+    <button type="button" id="btn-back-to-top" class="btn-back-to-top" title="Scroll to Top" aria-label="Scroll to top">&#8593;</button>
+
     <!-- Local jQuery Library (Downloaded locally as required, NO CDN) -->
     <script src="<?= base_url('js/lib/jquery-3.7.1.min.js') ?>"></script>
     <?php if (file_exists(__DIR__ . '/js/lib/chart.umd.min.js')): ?>
@@ -63,7 +66,7 @@
         <script src="<?= base_url('js/lib/chart.umd.min.js') ?>"></script>
     <?php endif; ?>
     <!-- Custom jQuery Application Script (No inline JS event handlers) -->
-    <script src="<?= base_url('js/app.js') ?>"></script>
+    <script src="<?= base_url('js/app.js?v=' . (file_exists(__DIR__ . '/js/app.js') ? filemtime(__DIR__ . '/js/app.js') : '1')) ?>"></script>
     <?php if (file_exists(__DIR__ . '/js/admin.js')): ?>
         <!-- Admin jQuery Handlers (No inline JS) -->
         <script src="<?= base_url('js/admin.js') ?>"></script>

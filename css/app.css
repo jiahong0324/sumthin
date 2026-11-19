@@ -34,10 +34,57 @@
     --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.08);
 }
 
+html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 85px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html {
+        scroll-behavior: auto;
+    }
+}
+
 *, *::before, *::after {
     box-sizing: border-box;
     margin: 0;
     padding: 0;
+}
+
+/* Custom Sleek Scrollbars */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-dark) transparent;
+}
+
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--border-dark);
+    border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--gray);
+}
+
+.dark-theme * {
+    scrollbar-color: #475569 transparent;
+}
+
+.dark-theme ::-webkit-scrollbar-thumb {
+    background: #334155;
+}
+
+.dark-theme ::-webkit-scrollbar-thumb:hover {
+    background: #64748b;
 }
 
 body {
@@ -1437,7 +1484,22 @@ body.dark-theme .shopee-trust-item {
     gap: 10px;
     overflow-x: auto;
     padding-bottom: 8px;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x proximity;
 }
+
+.category-scroll-list > * {
+    flex-shrink: 0;
+    scroll-snap-align: start;
+}
+#catalog,
+.catalog-filter-panel,
+section[id],
+div[id] {
+    scroll-margin-top: 95px;
+}
+
 .catalog-filter-panel {
     background: #ffffff;
     border: 1px solid var(--border);
@@ -3585,7 +3647,7 @@ body.dark-theme .member-avatar-sm {
 /* AJAX Toast Notification Container */
 .ajax-toast-container {
     position: fixed;
-    bottom: 24px;
+    bottom: 80px;
     right: 24px;
     z-index: 9999;
     display: flex;
@@ -3939,6 +4001,65 @@ body.dark-theme .chat-bubble-row.them .chat-bubble {
     background-color: #334155;
     color: #f8fafc;
 }
+
+/* ==========================================================================
+   Smooth Scroll Containers & Floating Back to Top Control
+   ========================================================================== */
+.checkout-items-scroll,
+.chat-conv-list,
+.chat-messages-container,
+.table-responsive,
+.search-suggestions-box {
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+}
+
+.btn-back-to-top {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background-color: var(--primary);
+    color: #ffffff;
+    border: none;
+    cursor: pointer;
+    font-size: 20px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--shadow);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(12px);
+    transition: opacity 0.25s ease, visibility 0.25s ease, transform 0.25s ease, background-color 0.2s ease;
+    z-index: 990;
+}
+
+.btn-back-to-top.show {
+    opacity: 0.9;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.btn-back-to-top:hover {
+    opacity: 1;
+    background-color: var(--primary-hover);
+    transform: translateY(-2px);
+}
+
+body.dark-theme .btn-back-to-top {
+    background-color: #3b82f6;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+body.dark-theme .btn-back-to-top:hover {
+    background-color: #2563eb;
+}
+
 
 
 

@@ -24,7 +24,7 @@ $user         = current_user();
         }
     </script>
     <!-- Modern Minimal Tech handwritten CSS -->
-    <link rel="stylesheet" href="<?= base_url('css/app.css') ?>">
+    <link rel="stylesheet" href="<?= base_url('css/app.css?v=' . (file_exists(__DIR__ . '/css/app.css') ? filemtime(__DIR__ . '/css/app.css') : '1')) ?>">
 </head>
 <body>
     <!-- Top announcement bar (Configured dynamically in Settings) -->

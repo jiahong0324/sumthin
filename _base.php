@@ -250,7 +250,7 @@ function captcha_widget(): string {
     }
 
     $site_key = (string)($config['captcha']['site_key'] ?? '');
-    if ($site_key === '') {
+    if ($site_key === '' || $site_key === 'PLACEHOLDER') {
         return '';
     }
 
