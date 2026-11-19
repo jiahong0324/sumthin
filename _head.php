@@ -51,9 +51,17 @@ $user         = current_user();
                 
                 <?php if (is_admin()): ?>
                     <!-- Admin specific navigation -->
+                    <?php
+                    $nav_low_stock = 0;
+                    try {
+                        $nav_low_stock = (int)$db->query("SELECT COUNT(*) FROM `product` WHERE `stock` <= `low_stock_threshold`")->fetchColumn();
+                    } catch (Exception $e) {}
+                    ?>
                     <span class="nav-badge admin-badge">Admin</span>
                     <a href="<?= base_url('admin/index.php') ?>" class="nav-link <?= ($current_page === 'index.php' && str_contains($_SERVER['REQUEST_URI'], '/admin/')) ? 'active' : '' ?>">Dashboard</a>
-                    <a href="<?= base_url('admin/products.php') ?>" class="nav-link <?= str_contains($_SERVER['REQUEST_URI'], '/admin/product') ? 'active' : '' ?>">Products</a>
+                    <a href="<?= base_url('admin/products.php') ?>" class="nav-link <?= str_contains($_SERVER['REQUEST_URI'], '/admin/product') ? 'active' : '' ?>">
+                        Products<?php if ($nav_low_stock > 0): ?><span class="badge-low-stock" title="<?= $nav_low_stock ?> product(s) low on inventory"><?= $nav_low_stock ?></span><?php endif; ?>
+                    </a>
                     <a href="<?= base_url('admin/categories.php') ?>" class="nav-link <?= str_contains($_SERVER['REQUEST_URI'], '/admin/categor') ? 'active' : '' ?>">Categories</a>
                     <a href="<?= base_url('admin/members.php') ?>" class="nav-link <?= str_contains($_SERVER['REQUEST_URI'], '/admin/member') ? 'active' : '' ?>">Members</a>
                     <a href="<?= base_url('admin/orders.php') ?>" class="nav-link <?= str_contains($_SERVER['REQUEST_URI'], '/admin/order') ? 'active' : '' ?>">Orders</a>

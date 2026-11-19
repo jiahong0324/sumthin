@@ -60,13 +60,42 @@ if (is_post()) {
         $errors['stock'] = 'Stock must be a non-negative whole number (0 or higher).';
     }
 
-    // 2. Validate File Upload using reusable helper
-    $photo_err = null;
-    $uploaded_filename = save_uploaded_image('photo', 'products', 'sumthin', $photo_err, 2);
-    if (!isset($_FILES['photo']) || $_FILES['photo']['error'] === UPLOAD_ERR_NO_FILE) {
-        $errors['photo'] = 'Product photo is required.';
-    } elseif ($photo_err) {
-        $errors['photo'] = $photo_err;
+    // 2. Validate Multiple File Uploads (up to 5 photos) using save_uploaded_image()
+    $uploaded_filenames = [];
+    if (!isset($_FILES['photos']) || empty($_FILES['photos']['name']) || (is_array($_FILES['photos']['name']) && empty($_FILES['photos']['name'][0]))) {
+        $errors['photos'] = 'At least one product photo is required.';
+    } else {
+        $total_files = is_array($_FILES['photos']['name']) ? count($_FILES['photos']['name']) : 1;
+        if ($total_files > 5) {
+            $errors['photos'] = 'Maximum 5 photos allowed per product.';
+        } else {
+            for ($i = 0; $i < $total_files; $i++) {
+                // Skip empty slots if browser sends empty file input
+                if (isset($_FILES['photos']['error'][$i]) && $_FILES['photos']['error'][$i] === UPLOAD_ERR_NO_FILE) {
+                    continue;
+                }
+                $photo_err = null;
+                $saved = save_uploaded_image('photos', 'products', 'sumthin', $photo_err, 2, $i);
+                if ($photo_err) {
+                    $errors['photos'] = $photo_err;
+                    break;
+                } elseif ($saved) {
+                    $uploaded_filenames[] = $saved;
+                }
+            }
+
+            if (empty($errors['photos']) && empty($uploaded_filenames)) {
+                $errors['photos'] = 'At least one valid product photo is required.';
+            }
+
+            // If an error occurred on any file, purge previously saved files in this request
+            if (!empty($errors['photos'])) {
+                foreach ($uploaded_filenames as $f) {
+                    delete_uploaded_image('products', $f);
+                }
+                $uploaded_filenames = [];
+            }
+        }
     }
 
     // 3. Database Insertion if Validation Passes
@@ -102,21 +131,27 @@ if (is_post()) {
             ]);
             $product_id = (int)$db->lastInsertId();
 
-            // Insert Primary Photo
+            // Insert Product Photos (First photo is primary)
             $photo_stmt = $db->prepare('
                 INSERT INTO `product_photo` (`product_id`, `photo_url`, `is_primary`, `sort_order`) 
-                VALUES (?, ?, 1, 1)
+                VALUES (?, ?, ?, ?)
             ');
-            $photo_stmt->execute([$product_id, $uploaded_filename]);
+            foreach ($uploaded_filenames as $idx => $fn) {
+                $is_primary = ($idx === 0) ? 1 : 0;
+                $sort_order = $idx + 1;
+                $photo_stmt->execute([$product_id, $fn, $is_primary, $sort_order]);
+            }
 
             $db->commit();
 
-            set_flash('success', "Product '{$name}' created successfully!");
+            set_flash('success', "Product '{$name}' with " . count($uploaded_filenames) . " photo(s) created successfully!");
             redirect(base_url('admin/products.php'));
         } catch (Exception $e) {
             $db->rollBack();
-            // Clean up uploaded file if database insert failed
-            delete_uploaded_image('products', $uploaded_filename);
+            // Clean up uploaded files if database insert failed
+            foreach ($uploaded_filenames as $f) {
+                delete_uploaded_image('products', $f);
+            }
             $errors['db'] = app_error_message('Failed to save product. Please try again.', $e);
         }
     }
@@ -126,23 +161,23 @@ $title = 'Add New Product';
 require_once __DIR__ . '/../_head.php';
 ?>
 
-<div class="container" style="max-width: 800px;">
+<div class="container container-form-md">
     <!-- Breadcrumb & Header -->
-    <div style="margin-bottom: 24px;">
+    <div class="mb-24">
         <a href="<?= base_url('admin/products.php') ?>" class="form-link">&larr; Back to Products</a>
-        <h1 style="font-size:26px; font-weight:800; color:var(--dark); margin-top:8px;">Add New sumthin Gadget</h1>
-        <p style="font-size:14px; color:var(--gray);">Enter gadget specifications, pricing, inventory, and upload photography.</p>
+        <h1 class="form-page-title">Add New sumthin Gadget</h1>
+        <p class="page-subtitle">Enter gadget specifications, pricing, inventory, and upload photography.</p>
     </div>
 
     <?php if (isset($errors['db'])): ?>
-        <div class="flash-alert flash-error" style="margin-bottom:20px;">
+        <div class="flash-alert flash-error mb-20">
             <div class="flash-icon">✕</div>
             <div class="flash-message"><?= encode($errors['db']) ?></div>
         </div>
     <?php endif; ?>
 
     <!-- Form Card -->
-    <div style="background:#fff; border:1px solid var(--border); border-radius:var(--radius); padding:32px; box-shadow:var(--shadow-sm);">
+    <div class="card-panel-body">
         <form action="<?= base_url('admin/product_add.php') ?>" method="POST" enctype="multipart/form-data" novalidate>
             <?= csrf_field() ?>
 
@@ -154,8 +189,8 @@ require_once __DIR__ . '/../_head.php';
             </div>
 
             <!-- Category & Brand Row -->
-            <div style="display:flex; gap:16px; flex-wrap:wrap;">
-                <div class="form-group" style="flex:1; min-width:220px;">
+            <div class="d-flex gap-16 flex-wrap">
+                <div class="form-group flex-1 min-w-220">
                     <label for="category_id" class="form-label">Category *</label>
                     <select name="category_id" id="category_id" class="form-select">
                         <option value="">-- Select Category --</option>
@@ -168,7 +203,7 @@ require_once __DIR__ . '/../_head.php';
                     <?= err('category_id') ?>
                 </div>
 
-                <div class="form-group" style="flex:1; min-width:220px;">
+                <div class="form-group flex-1 min-w-220">
                     <label for="brand_id" class="form-label">Brand Series</label>
                     <select name="brand_id" id="brand_id" class="form-select">
                         <option value="">-- None / Default --</option>
@@ -183,14 +218,14 @@ require_once __DIR__ . '/../_head.php';
             </div>
 
             <!-- Price and Stock Row -->
-            <div style="display:flex; gap:16px; flex-wrap:wrap;">
-                <div class="form-group" style="flex:1; min-width:220px;">
+            <div class="d-flex gap-16 flex-wrap">
+                <div class="form-group flex-1 min-w-220">
                     <label for="price" class="form-label">Selling Price (RM) *</label>
                     <?= html_text('price', $price, ['placeholder' => 'e.g. 299.00']) ?>
                     <?= err('price') ?>
                 </div>
 
-                <div class="form-group" style="flex:1; min-width:220px;">
+                <div class="form-group flex-1 min-w-220">
                     <label for="stock" class="form-label">Initial Stock Quantity *</label>
                     <?= html_text('stock', $stock, ['placeholder' => 'e.g. 25']) ?>
                     <?= err('stock') ?>
@@ -204,21 +239,27 @@ require_once __DIR__ . '/../_head.php';
                 <?= err('description') ?>
             </div>
 
-            <!-- Product Photo Upload -->
+            <!-- Multiple Product Photos Upload (Drag & Drop Zone) -->
             <div class="form-group">
-                <label for="photo" class="form-label">Primary Product Photo *</label>
-                <?= html_file('photo', 'image/png,image/jpeg,image/webp') ?>
-                <?= err('photo') ?>
-                <span class="form-help">Formats accepted: PNG, JPG, JPEG, WEBP. Max file size: 2 MB.</span>
+                <label class="form-label">Product Photography * (Up to 5 Photos)</label>
+                <div id="drop-zone" class="drop-zone" data-existing-count="0">
+                    <span class="drop-zone-icon">📷</span>
+                    <div class="drop-zone-text">Drag & drop photos here, or click to browse</div>
+                    <div class="drop-zone-hint">Upload 1 to 5 images (JPG, PNG, WEBP &le; 2 MB each). The first photo will be set as primary.</div>
+                    <input type="file" name="photos[]" id="photos-input" multiple accept="image/jpeg,image/png,image/webp" class="d-none">
+                </div>
+                <div id="drop-zone-error" class="form-error d-none mt-8"></div>
+                <div id="thumbnails-preview" class="thumbnails-preview"></div>
+                <?= err('photos') ?>
             </div>
 
             <!-- Featured Checkbox -->
-            <div class="form-row" style="margin-top:10px;">
+            <div class="form-row mt-10">
                 <?= html_checkbox('is_featured', '1', !empty($is_featured), 'Feature this gadget prominently on the homepage hero catalog') ?>
             </div>
 
             <!-- Submit Buttons -->
-            <div style="display:flex; gap:12px; margin-top:20px; border-top:1px solid var(--border); padding-top:20px;">
+            <div class="form-actions d-flex gap-12">
                 <button type="submit" class="btn btn-primary">Create Product</button>
                 <a href="<?= base_url('admin/products.php') ?>" class="btn btn-secondary">Cancel</a>
             </div>

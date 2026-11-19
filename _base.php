@@ -899,28 +899,53 @@ function get_malaysian_states(): array {
 /**
  * Handle uploaded image with security validation (error codes, size limit, extension whitelist, finfo MIME check)
  *
- * @param string $field The key in $_FILES
+ * @param string|array $field The key in $_FILES, or a single normalized file array
  * @param string $folder Relative folder name under uploads/ (e.g. 'members' or 'products') or full path
  * @param string $prefix Prefix for generated filename (e.g. 'user' or 'sumthin')
  * @param string|null &$error Reference to error string output
  * @param int $max_mb Maximum allowed size in megabytes (default 2)
+ * @param int|null $index Optional index if $field is an array in $_FILES (e.g. photos[])
  * @return string|null Generated filename on success, or null on error or when no file uploaded
  */
-function save_uploaded_image(string $field, string $folder, string $prefix, ?string &$error = null, int $max_mb = 2): ?string {
-    if (!isset($_FILES[$field]) || $_FILES[$field]['error'] === UPLOAD_ERR_NO_FILE) {
+function save_uploaded_image($field, string $folder, string $prefix, ?string &$error = null, int $max_mb = 2, ?int $index = null): ?string {
+    if (is_array($field) && isset($field['tmp_name'])) {
+        $file = $field;
+    } elseif (is_string($field)) {
+        if (!isset($_FILES[$field])) {
+            return null;
+        }
+        if ($index !== null) {
+            if (!isset($_FILES[$field]['name'][$index])) {
+                return null;
+            }
+            $file = [
+                'name'     => $_FILES[$field]['name'][$index],
+                'type'     => $_FILES[$field]['type'][$index] ?? '',
+                'tmp_name' => $_FILES[$field]['tmp_name'][$index] ?? '',
+                'error'    => $_FILES[$field]['error'][$index] ?? UPLOAD_ERR_NO_FILE,
+                'size'     => $_FILES[$field]['size'][$index] ?? 0,
+            ];
+        } else {
+            $file = $_FILES[$field];
+        }
+    } else {
         return null;
     }
 
-    $file = $_FILES[$field];
+    if ($file['error'] === UPLOAD_ERR_NO_FILE) {
+        return null;
+    }
+
+    $clean_original_name = basename($file['name']);
 
     if ($file['error'] !== UPLOAD_ERR_OK) {
-        $error = 'File upload error (Code: ' . (int)$file['error'] . ').';
+        $error = "File '{$clean_original_name}' upload error (Code: " . (int)$file['error'] . ").";
         return null;
     }
 
     $max_bytes = $max_mb * 1024 * 1024;
     if ($file['size'] > $max_bytes) {
-        $error = "File size cannot exceed {$max_mb} MB.";
+        $error = "File '{$clean_original_name}' size cannot exceed {$max_mb} MB.";
         return null;
     }
 
@@ -929,17 +954,17 @@ function save_uploaded_image(string $field, string $folder, string $prefix, ?str
 
     $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
     if (!in_array($ext, $allowed_exts, true)) {
-        $error = 'Allowed file formats: JPG, JPEG, PNG, WEBP.';
+        $error = "File '{$clean_original_name}': Allowed file formats: JPG, JPEG, PNG, WEBP.";
         return null;
     }
 
-    // Verify MIME type using finfo
+    // Verify actual MIME type using finfo
     $finfo = finfo_open(FILEINFO_MIME_TYPE);
     $mime = finfo_file($finfo, $file['tmp_name']);
     finfo_close($finfo);
 
     if (!in_array($mime, $allowed_mimes, true)) {
-        $error = 'Invalid image content detected. Upload rejected.';
+        $error = "File '{$clean_original_name}': Invalid image content detected. Upload rejected.";
         return null;
     }
 
@@ -956,7 +981,7 @@ function save_uploaded_image(string $field, string $folder, string $prefix, ?str
     $destination = $upload_dir . DIRECTORY_SEPARATOR . $filename;
 
     if (!move_uploaded_file($file['tmp_name'], $destination)) {
-        $error = 'Failed to save uploaded file to disk.';
+        $error = "Failed to save uploaded file '{$clean_original_name}' to disk.";
         return null;
     }
 

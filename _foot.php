@@ -58,11 +58,19 @@
 
     <!-- Local jQuery Library (Downloaded locally as required, NO CDN) -->
     <script src="<?= base_url('js/lib/jquery-3.7.1.min.js') ?>"></script>
+    <?php if (file_exists(__DIR__ . '/js/lib/chart.umd.min.js')): ?>
+        <!-- Local Chart.js 4.x UMD Library (No CDN) -->
+        <script src="<?= base_url('js/lib/chart.umd.min.js') ?>"></script>
+    <?php endif; ?>
     <!-- Custom jQuery Application Script (No inline JS event handlers) -->
     <script src="<?= base_url('js/app.js') ?>"></script>
     <?php if (file_exists(__DIR__ . '/js/admin.js')): ?>
         <!-- Admin jQuery Handlers (No inline JS) -->
         <script src="<?= base_url('js/admin.js') ?>"></script>
+    <?php endif; ?>
+    <?php if (file_exists(__DIR__ . '/js/product.js')): ?>
+        <!-- Product Photo Slider and Drag & Drop (No inline JS) -->
+        <script src="<?= base_url('js/product.js') ?>"></script>
     <?php endif; ?>
 </body>
 </html>

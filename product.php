@@ -41,6 +41,22 @@ $rev_stmt = $db->prepare('
 $rev_stmt->execute([$id]);
 $reviews = $rev_stmt->fetchAll();
 
+// Fetch all photos for this product
+$photos_stmt = $db->prepare('SELECT * FROM `product_photo` WHERE `product_id` = ? ORDER BY `is_primary` DESC, `sort_order` ASC, `id` ASC');
+$photos_stmt->execute([$id]);
+$product_photos = $photos_stmt->fetchAll();
+
+if (empty($product_photos)) {
+    $product_photos = [
+        (object)[
+            'photo_url'  => $p->photo_url ?? 'default_product.png',
+            'is_primary' => 1,
+            'sort_order' => 1
+        ]
+    ];
+}
+$primary_photo = $product_photos[0]->photo_url;
+
 $avg_rating = 0;
 if (!empty($reviews)) {
     $sum = array_sum(array_map(fn($r) => $r->rating, $reviews));
@@ -69,14 +85,38 @@ require_once __DIR__ . '/_head.php';
 
     <!-- Product Showcase Grid -->
     <div class="card-panel product-detail-card">
-        <!-- Left: Product Photo Box -->
+        <!-- Left: Product Photo Slider (Dynamic Slider) -->
         <div>
-            <div class="product-gallery-stage">
-                <img src="<?= base_url('uploads/products/' . encode($p->photo_url)) ?>" 
-                     alt="<?= encode($p->name) ?>" 
-                     class="product-gallery-img">
+            <div class="product-slider" id="product-slider">
+                <div class="slider-main-stage">
+                    <img id="slider-main-img" 
+                         src="<?= base_url('uploads/products/' . encode($primary_photo)) ?>" 
+                         alt="<?= encode($p->name) ?>" 
+                         class="slider-main-img">
+
+                    <?php if (count($product_photos) > 1): ?>
+                        <button type="button" class="slider-arrow slider-prev" id="slider-prev" aria-label="Previous photo">&lsaquo;</button>
+                        <button type="button" class="slider-arrow slider-next" id="slider-next" aria-label="Next photo">&rsaquo;</button>
+                    <?php endif; ?>
+                </div>
+
+                <?php if (count($product_photos) > 1): ?>
+                    <div class="slider-thumbnails" id="slider-thumbnails">
+                        <?php foreach ($product_photos as $idx => $ph): ?>
+                            <button type="button" 
+                                    class="slider-thumb-btn <?= $idx === 0 ? 'active' : '' ?>" 
+                                    data-index="<?= $idx ?>" 
+                                    data-src="<?= base_url('uploads/products/' . encode($ph->photo_url)) ?>"
+                                    aria-label="View photo <?= $idx + 1 ?>">
+                                <img src="<?= base_url('uploads/products/' . encode($ph->photo_url)) ?>" 
+                                     alt="Thumbnail <?= $idx + 1 ?>">
+                            </button>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
             </div>
-            <div class="product-trust-row">
+
+            <div class="product-trust-row" style="margin-top:14px;">
                 <span>🛡️ 2-Year sumthin Official Warranty</span>
                 <span>&bull;</span>
                 <span>⚡ Same-Day Dispatch</span>

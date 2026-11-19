@@ -100,6 +100,31 @@ $stmt = $db->prepare($product_sql);
 $stmt->execute($params);
 $products = $stmt->fetchAll();
 
+// ----------------------------------------------------------------------------
+// TASK D6: Top Selling Products Leaderboard (Top 5 from non-cancelled orders)
+// Displayed only when no search / filter / sort / pagination parameter is present
+// ----------------------------------------------------------------------------
+$is_default_view = ($q === '' && $cat_slug === '' && $min_price === '' && $max_price === '' && ($sort === 'featured' || $sort === '') && $page === 1);
+$top_selling_products = [];
+if ($is_default_view) {
+    $top_stmt = $db->query("
+        SELECT p.*, c.name AS category_name, b.name AS brand_name,
+               COALESCE(pp.photo_url, 'default_product.png') AS photo_url,
+               COALESCE(SUM(oi.quantity), 0) AS units_sold
+        FROM `product` p
+        JOIN `order_item` oi ON p.id = oi.product_id
+        JOIN `order` o ON oi.order_id = o.id
+        JOIN `category` c ON p.category_id = c.id
+        LEFT JOIN `brand` b ON p.brand_id = b.id
+        LEFT JOIN `product_photo` pp ON p.id = pp.product_id AND pp.is_primary = 1
+        WHERE o.status != 'Cancelled'
+        GROUP BY p.id
+        ORDER BY units_sold DESC, p.id ASC
+        LIMIT 5
+    ");
+    $top_selling_products = $top_stmt->fetchAll();
+}
+
 // Helper to retain active filters in pagination links
 function catalog_page_url(int $target_page): string {
     global $q, $cat_slug, $min_price, $max_price, $sort;
@@ -137,6 +162,43 @@ require_once __DIR__ . '/_head.php';
             <?php endforeach; ?>
         </div>
     </div>
+
+    <!-- Top Selling Products Section (TASK D6: Only on default catalog view) -->
+    <?php if ($is_default_view && !empty($top_selling_products)): ?>
+        <section class="top-selling-section">
+            <div class="top-selling-header">
+                <h2 class="top-selling-title">
+                    <span>🔥</span> Top Selling Gadgets
+                </h2>
+                <span style="font-size:13px; color:#94a3b8;">Customer Favorites &bull; Top 5 from non-cancelled orders</span>
+            </div>
+            <div class="top-selling-grid">
+                <?php $rank = 1; foreach ($top_selling_products as $top_p): ?>
+                    <a href="<?= base_url('product.php?id=' . (int)$top_p->id) ?>" class="top-selling-card">
+                        <span class="top-selling-rank">#<?= $rank++ ?></span>
+                        <img src="<?= base_url('uploads/products/' . encode($top_p->photo_url)) ?>" 
+                             alt="<?= encode($top_p->name) ?>" 
+                             class="top-selling-img" 
+                             loading="lazy">
+                        <div style="font-size:11px; color:#94a3b8; margin-bottom:4px;">
+                            <?= encode($top_p->category_name) ?>
+                        </div>
+                        <div style="font-weight:700; font-size:14px; color:#ffffff; margin-bottom:6px; line-height:1.3; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">
+                            <?= encode($top_p->name) ?>
+                        </div>
+                        <div style="margin-top:auto; display:flex; justify-content:space-between; align-items:center;">
+                            <span style="font-weight:800; color:#38bdf8; font-size:14px;">
+                                RM <?= number_format((float)$top_p->price, 2) ?>
+                            </span>
+                            <span style="font-size:11px; color:#e2e8f0; background:rgba(255,255,255,0.15); padding:2px 6px; border-radius:4px;">
+                                <?= (int)$top_p->units_sold ?> sold
+                            </span>
+                        </div>
+                    </a>
+                <?php endforeach; ?>
+            </div>
+        </section>
+    <?php endif; ?>
 
     <!-- Multi-Criteria Search & Filter Controls Panel (Basic Searching + Combined Filter/Sort) -->
     <section id="catalog" class="card-panel catalog-filter-panel">
@@ -259,7 +321,7 @@ require_once __DIR__ . '/_head.php';
                         <div>
                             <span class="product-price">RM <?= number_format((float)$p->price, 2) ?></span>
                             <div class="product-stock mt-2">
-                                <?php if ($p->stock > 15): ?>
+                                <?php if ($p->stock > $p->low_stock_threshold): ?>
                                     <span class="stock-status-in">In Stock (<?= (int)$p->stock ?>)</span>
                                 <?php elseif ($p->stock > 0): ?>
                                     <span class="stock-status-low">Low Stock (<?= (int)$p->stock ?> left)</span>

@@ -64,25 +64,25 @@ require_once __DIR__ . '/../_head.php';
     <!-- Header -->
     <div class="admin-header-panel">
         <div>
-            <h1 style="font-size:24px; font-weight:800; color:var(--dark);">Order Fulfillment & Dispatch</h1>
-            <p style="font-size:14px; color:var(--gray); margin-top:4px;">
+            <h1 class="page-title">Order Fulfillment & Dispatch</h1>
+            <p class="page-subtitle mt-4">
                 Manage customer gadget orders, assign tracking numbers, and update shipping progress.
             </p>
         </div>
-        <span class="role-pill pill-member" style="font-size:13px; padding:6px 14px;">
+        <span class="role-pill pill-member pill-counter">
             <?= $total_rows ?> Total Order(s)
         </span>
     </div>
 
     <!-- Search & Filter Controls -->
-    <div style="background:#fff; border:1px solid var(--border); border-radius:var(--radius); padding:20px; margin-bottom:24px;">
-        <form action="<?= base_url('admin/orders.php') ?>" method="GET" style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;">
-            <div style="flex:2; min-width:240px;">
+    <div class="filter-panel mb-24">
+        <form action="<?= base_url('admin/orders.php') ?>" method="GET" class="filter-form">
+            <div class="filter-group-search">
                 <label for="q" class="form-label">Search Orders</label>
                 <input type="text" name="q" id="q" value="<?= encode($q) ?>" placeholder="Search by Order #, Customer Name, or Tracking #..." class="form-control">
             </div>
 
-            <div style="flex:1; min-width:160px;">
+            <div class="min-w-160 flex-1">
                 <label for="status" class="form-label">Fulfillment Status</label>
                 <select name="status" id="status" class="form-select">
                     <option value="">All Statuses</option>
@@ -94,15 +94,15 @@ require_once __DIR__ . '/../_head.php';
                 </select>
             </div>
 
-            <div style="display:flex; gap:8px;">
-                <button type="submit" class="btn btn-primary-sm" style="height:38px;">Filter Orders</button>
-                <a href="<?= base_url('admin/orders.php') ?>" class="btn btn-outline-sm" style="height:38px; display:inline-flex; align-items:center;">Reset</a>
+            <div class="filter-group-actions">
+                <button type="submit" class="btn btn-primary-sm btn-filter-submit">Filter Orders</button>
+                <a href="<?= base_url('admin/orders.php') ?>" class="btn btn-outline-sm btn-filter-reset">Reset</a>
             </div>
         </form>
     </div>
 
     <!-- Results Count -->
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; font-size:14px; color:var(--gray);">
+    <div class="flex-between mb-14 fs-14 text-muted">
         <span>Showing <strong><?= count($orders) ?></strong> of <strong><?= $total_rows ?></strong> matching order(s)</span>
         <span>Page <strong><?= $page ?></strong> of <strong><?= $total_pages ?></strong></span>
     </div>
@@ -119,50 +119,50 @@ require_once __DIR__ . '/../_head.php';
                     <th>Total Amount</th>
                     <th>Payment</th>
                     <th>Fulfillment</th>
-                    <th style="text-align:right;">Actions</th>
+                    <th class="text-right">Actions</th>
                 </tr>
             </thead>
             <tbody>
                 <?php if (empty($orders)): ?>
-                    <tr><td colspan="8" style="text-align:center; padding:40px; color:var(--gray);">No orders found.</td></tr>
+                    <tr><td colspan="8" class="table-empty-cell p-40">No orders found.</td></tr>
                 <?php else: ?>
                     <?php foreach ($orders as $o): ?>
                         <tr>
                             <td>
                                 <strong><?= encode($o->order_no) ?></strong>
                                 <?php if ($o->tracking_no): ?>
-                                    <div style="font-size:11px; color:var(--gray);"><code><?= encode($o->tracking_no) ?></code></div>
+                                    <div class="fs-11 text-muted"><code><?= encode($o->tracking_no) ?></code></div>
                                 <?php endif; ?>
                             </td>
                             <td>
-                                <div style="font-weight:700;"><?= encode($o->customer_name) ?></div>
-                                <div style="font-size:12px; color:var(--gray);"><?= encode($o->customer_email) ?></div>
+                                <div class="fw-700"><?= encode($o->customer_name) ?></div>
+                                <div class="fs-12 text-muted"><?= encode($o->customer_email) ?></div>
                             </td>
                             <td><?= encode(date('d M Y, h:i A', strtotime($o->created_at))) ?></td>
                             <td><?= (int)$o->total_items ?> item(s)</td>
-                            <td style="font-weight:800; color:var(--dark);">
+                            <td class="fw-800 text-dark">
                                 RM <?= number_format((float)$o->final_amount, 2) ?>
                             </td>
                             <td>
-                                <span class="role-pill" style="background:#dcfce7; color:#15803d; font-size:11px;">
+                                <span class="role-pill badge-payment-paid fs-11">
                                     <?= encode($o->payment_status) ?>
                                 </span>
                             </td>
                             <td>
                                 <?php
-                                $status_badge_style = match ($o->status) {
-                                    'Delivered'  => 'background:#dcfce7; color:#15803d;',
-                                    'Shipped'    => 'background:#e0f2fe; color:#0369a1;',
-                                    'Processing' => 'background:#fef3c7; color:#b45309;',
-                                    'Cancelled'  => 'background:#fee2e2; color:#b91c1c;',
-                                    default      => 'background:#f1f5f9; color:#475569;',
+                                $status_badge_class = match ($o->status) {
+                                    'Delivered'  => 'badge-status-delivered',
+                                    'Shipped'    => 'badge-status-shipped',
+                                    'Processing' => 'badge-status-processing',
+                                    'Cancelled'  => 'badge-status-cancelled',
+                                    default      => 'badge-status-pending',
                                 };
                                 ?>
-                                <span class="role-pill" style="<?= $status_badge_style ?> font-size:11px;">
+                                <span class="role-pill <?= $status_badge_class ?> fs-11">
                                     <?= encode($o->status) ?>
                                 </span>
                             </td>
-                            <td style="text-align:right;">
+                            <td class="text-right">
                                 <a href="<?= base_url('admin/order_detail.php?id=' . (int)$o->id) ?>" class="btn btn-outline-sm">
                                     Manage &rarr;
                                 </a>
@@ -176,7 +176,7 @@ require_once __DIR__ . '/../_head.php';
 
     <!-- Pagination -->
     <?php if ($total_pages > 1): ?>
-        <div style="display:flex; justify-content:center; gap:6px; margin-top:24px;">
+        <div class="flex-center gap-6 mt-24">
             <?php $params = $_GET; ?>
             <?php for ($i = 1; $i <= $total_pages; $i++): ?>
                 <?php $params['page'] = $i; ?>

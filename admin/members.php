@@ -69,28 +69,28 @@ require_once __DIR__ . '/../_head.php';
     <!-- Header -->
     <div class="admin-header-panel">
         <div>
-            <h1 style="font-size:24px; font-weight:800; color:var(--dark);">User & Member Directory</h1>
-            <p style="font-size:14px; color:var(--gray); margin-top:4px;">
+            <h1 class="page-title">User & Member Directory</h1>
+            <p class="page-subtitle mt-4">
                 Directory of registered customers and staff administrators, account status, and order history.
             </p>
         </div>
-        <div style="display:flex; gap:10px; align-items:center;">
+        <div class="d-flex gap-10 items-center">
             <a href="<?= base_url('admin/member_add.php') ?>" class="btn btn-primary-sm">+ Add New User / Staff</a>
-            <span class="role-pill pill-member" style="font-size:13px; padding:6px 14px;">
+            <span class="role-pill pill-member pill-counter">
                 <?= $total_rows ?> User(s)
             </span>
         </div>
     </div>
 
     <!-- Search & Filter Controls -->
-    <div style="background:#fff; border:1px solid var(--border); border-radius:var(--radius); padding:20px; margin-bottom:24px;">
-        <form action="<?= base_url('admin/members.php') ?>" method="GET" style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;">
-            <div style="flex:2; min-width:240px;">
+    <div class="filter-panel p-20 mb-24">
+        <form action="<?= base_url('admin/members.php') ?>" method="GET" class="filter-form">
+            <div class="flex-2 min-w-240">
                 <label for="q" class="form-label">Search Users</label>
                 <input type="text" name="q" id="q" value="<?= encode($q) ?>" placeholder="Search by name, email, or phone number..." class="form-control">
             </div>
 
-            <div style="flex:1; min-width:140px;">
+            <div class="flex-1 min-w-140">
                 <label for="role" class="form-label">Role</label>
                 <select name="role" id="role" class="form-select">
                     <option value="">All Roles</option>
@@ -99,7 +99,7 @@ require_once __DIR__ . '/../_head.php';
                 </select>
             </div>
 
-            <div style="flex:1; min-width:140px;">
+            <div class="flex-1 min-w-140">
                 <label for="status" class="form-label">Account Status</label>
                 <select name="status" id="status" class="form-select">
                     <option value="">All Statuses</option>
@@ -108,15 +108,15 @@ require_once __DIR__ . '/../_head.php';
                 </select>
             </div>
 
-            <div style="display:flex; gap:8px;">
-                <button type="submit" class="btn btn-primary-sm" style="height:38px;">Filter Directory</button>
-                <a href="<?= base_url('admin/members.php') ?>" class="btn btn-outline-sm" style="height:38px; display:inline-flex; align-items:center;">Reset</a>
+            <div class="d-flex gap-8">
+                <button type="submit" class="btn btn-primary-sm btn-filter-h">Filter Directory</button>
+                <a href="<?= base_url('admin/members.php') ?>" class="btn btn-outline-sm btn-filter-h d-inline-flex items-center">Reset</a>
             </div>
         </form>
     </div>
 
     <!-- Results Count -->
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; font-size:14px; color:var(--gray);">
+    <div class="flex-between mb-14 fs-14 text-muted">
         <span>Showing <strong><?= count($members) ?></strong> of <strong><?= $total_rows ?></strong> member(s)</span>
         <span>Page <strong><?= $page ?></strong> of <strong><?= $total_pages ?></strong></span>
     </div>
@@ -126,19 +126,19 @@ require_once __DIR__ . '/../_head.php';
         <table class="table-custom">
             <thead>
                 <tr>
-                    <th style="width:50px;">Avatar</th>
+                    <th class="w-50">Avatar</th>
                     <th>Member Details</th>
                     <th>Contact Phone</th>
                     <th>Paid Spend</th>
                     <th>Status</th>
                     <th>Registered Date</th>
-                    <th style="text-align:right; width:170px;">Actions</th>
+                    <th class="text-right min-w-170">Actions</th>
                 </tr>
             </thead>
             <tbody>
                 <?php if (empty($members)): ?>
                     <tr>
-                        <td colspan="7" style="text-align:center; padding:40px; color:var(--gray);">
+                        <td colspan="7" class="table-empty-cell">
                             No members found matching your search.
                         </td>
                     </tr>
@@ -146,59 +146,59 @@ require_once __DIR__ . '/../_head.php';
                     <?php foreach ($members as $m): ?>
                         <tr>
                             <td>
-                                <div style="width:40px; height:40px; border-radius:50%; overflow:hidden; background:#e2e8f0; border:1px solid var(--border);">
+                                <div class="member-avatar-sm">
                                     <img src="<?= base_url('uploads/members/' . encode($m->photo ?? 'default_user.png')) ?>" 
                                          alt="<?= encode($m->name) ?>" 
-                                         style="width:100%; height:100%; object-fit:cover;">
+                                         class="img-cover-full">
                                 </div>
                             </td>
                             <td>
-                                <div style="font-weight:700; display:flex; align-items:center; gap:6px;">
-                                    <a href="<?= base_url('admin/member_detail.php?id=' . (int)$m->id) ?>" style="text-decoration:none; color:inherit;">
+                                <div class="fw-700 d-flex items-center gap-6">
+                                    <a href="<?= base_url('admin/member_detail.php?id=' . (int)$m->id) ?>" class="text-decoration-none color-inherit">
                                         <?= encode($m->name) ?>
                                     </a>
-                                    <span class="role-pill <?= $m->role === 'Admin' ? 'pill-admin' : 'pill-member' ?>" style="font-size:10px; padding:1px 6px;">
+                                    <span class="role-pill <?= $m->role === 'Admin' ? 'pill-admin' : 'pill-member' ?> badge-xs">
                                         <?= encode($m->role) ?>
                                     </span>
                                 </div>
-                                <div style="font-size:12px; color:var(--gray);"><?= encode($m->email) ?></div>
+                                <div class="fs-12 text-muted"><?= encode($m->email) ?></div>
                             </td>
                             <td><?= encode($m->phone ?? 'Not provided') ?></td>
                             <td>
                                 <strong>RM <?= number_format((float)$m->total_spent, 2) ?></strong>
-                                <div style="font-size:11px; color:var(--gray);"><?= (int)$m->total_orders ?> order(s)</div>
+                                <div class="fs-11 text-muted"><?= (int)$m->total_orders ?> order(s)</div>
                             </td>
                             <td>
                                 <div>
                                     <?php if ($m->status === 'Active'): ?>
-                                        <span class="role-pill" style="background:#dcfce7; color:#15803d;">Active</span>
+                                        <span class="role-pill badge-stock-healthy">Active</span>
                                     <?php else: ?>
                                         <span class="role-pill pill-admin">Blocked</span>
                                     <?php endif; ?>
                                 </div>
-                                <div style="margin-top: 4px;">
+                                <div class="mt-4">
                                     <?php if (!empty($m->email_verified_at)): ?>
-                                        <span class="role-pill" style="background:#e0f2fe; color:#0369a1; font-size:10px; padding:1px 6px;" title="Verified at <?= encode($m->email_verified_at) ?>">✓ Verified</span>
+                                        <span class="role-pill badge-info badge-xs" title="Verified at <?= encode($m->email_verified_at) ?>">✓ Verified</span>
                                     <?php else: ?>
-                                        <span class="role-pill" style="background:#fef3c7; color:#b45309; font-size:10px; padding:1px 6px;">⚠ Unverified</span>
+                                        <span class="role-pill badge-warning badge-xs">⚠ Unverified</span>
                                     <?php endif; ?>
                                 </div>
                             </td>
                             <td><?= encode(date('d M Y', strtotime($m->created_at))) ?></td>
-                            <td style="text-align:right;">
-                                <div style="display:inline-flex; gap:6px;">
+                            <td class="text-right">
+                                <div class="d-inline-flex gap-6">
                                     <a href="<?= base_url('admin/member_detail.php?id=' . (int)$m->id) ?>" class="btn btn-outline-sm">
                                         View Details
                                     </a>
-                                    <form action="<?= base_url('admin/member_toggle_status.php') ?>" method="POST" style="display:inline;">
+                                    <form action="<?= base_url('admin/member_toggle_status.php') ?>" method="POST" class="d-inline">
                                         <?= csrf_field() ?>
                                         <input type="hidden" name="id" value="<?= (int)$m->id ?>">
                                         <?php if ($m->status === 'Active'): ?>
-                                            <button type="submit" class="btn btn-outline-sm" style="color:var(--error); border-color:#fca5a5;" data-confirm="Suspend this member account?">
+                                            <button type="submit" class="btn btn-outline-sm btn-outline-danger" data-confirm="Suspend this member account?">
                                                 Block
                                             </button>
                                         <?php else: ?>
-                                            <button type="submit" class="btn btn-outline-sm" style="color:var(--success); border-color:#86efac;" data-confirm="Re-activate this member account?">
+                                            <button type="submit" class="btn btn-outline-sm btn-outline-success" data-confirm="Re-activate this member account?">
                                                 Unblock
                                             </button>
                                         <?php endif; ?>
@@ -214,7 +214,7 @@ require_once __DIR__ . '/../_head.php';
 
     <!-- Pagination -->
     <?php if ($total_pages > 1): ?>
-        <div style="display:flex; justify-content:center; gap:6px; margin-top:24px;">
+        <div class="pagination-wrapper flex-center gap-6 mt-24">
             <?php $params = $_GET; ?>
             <?php for ($i = 1; $i <= $total_pages; $i++): ?>
                 <?php $params['page'] = $i; ?>

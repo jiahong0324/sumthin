@@ -92,16 +92,16 @@ $title = 'Add New Account';
 require_once __DIR__ . '/../_head.php';
 ?>
 
-<div class="container" style="max-width: 700px;">
+<div class="container container-member-form">
     <!-- Breadcrumb & Header -->
-    <div style="margin-bottom: 24px;">
+    <div class="mb-24">
         <a href="<?= base_url('admin/members.php') ?>" class="form-link">&larr; Back to Directory</a>
-        <h1 style="font-size:26px; font-weight:800; color:var(--dark); margin-top:8px;">Provision New User Account</h1>
-        <p style="font-size:14px; color:var(--gray);">Create a new Member or Admin account with custom credentials and roles.</p>
+        <h1 class="form-page-title">Provision New User Account</h1>
+        <p class="page-subtitle">Create a new Member or Admin account with custom credentials and roles.</p>
     </div>
 
     <!-- Form Card -->
-    <div style="background:#fff; border:1px solid var(--border); border-radius:var(--radius); padding:32px; box-shadow:var(--shadow-sm);">
+    <div class="card-panel-body">
         <form action="<?= base_url('admin/member_add.php') ?>" method="POST" enctype="multipart/form-data" novalidate>
             <?= csrf_field() ?>
 
@@ -123,14 +123,14 @@ require_once __DIR__ . '/../_head.php';
             </div>
 
             <!-- Email & Phone Grid -->
-            <div style="display:flex; gap:16px; flex-wrap:wrap;">
-                <div class="form-group" style="flex:1; min-width:240px;">
+            <div class="d-flex gap-16 flex-wrap">
+                <div class="form-group flex-1 min-w-240">
                     <label for="email" class="form-label">Email Address *</label>
                     <?= html_text('email', $email, ['placeholder' => 'e.g. sarah@sumthin.com', 'autocomplete' => 'email']) ?>
                     <?= err('email') ?>
                 </div>
 
-                <div class="form-group" style="flex:1; min-width:200px;">
+                <div class="form-group flex-1 min-w-200">
                     <label for="phone" class="form-label">Phone Number</label>
                     <?= html_text('phone', $phone, ['placeholder' => 'e.g. 012-3456789']) ?>
                     <?= err('phone') ?>
@@ -138,14 +138,14 @@ require_once __DIR__ . '/../_head.php';
             </div>
 
             <!-- Password & Confirm Password Grid -->
-            <div style="display:flex; gap:16px; flex-wrap:wrap;">
-                <div class="form-group" style="flex:1; min-width:220px;">
+            <div class="d-flex gap-16 flex-wrap">
+                <div class="form-group flex-1 min-w-220">
                     <label for="password" class="form-label">Initial Password *</label>
                     <?= html_password('password', ['placeholder' => 'At least 8 chars (A-Z, a-z, 0-9)']) ?>
                     <?= err('password') ?>
                 </div>
 
-                <div class="form-group" style="flex:1; min-width:220px;">
+                <div class="form-group flex-1 min-w-220">
                     <label for="confirm_password" class="form-label">Confirm Password *</label>
                     <?= html_password('confirm_password', ['placeholder' => 'Re-type password']) ?>
                     <?= err('confirm_password') ?>
@@ -161,7 +161,7 @@ require_once __DIR__ . '/../_head.php';
             </div>
 
             <!-- Buttons -->
-            <div style="display:flex; gap:12px; margin-top:24px; border-top:1px solid var(--border); padding-top:20px;">
+            <div class="form-actions d-flex gap-12">
                 <button type="submit" class="btn btn-primary">Create User Account</button>
                 <a href="<?= base_url('admin/members.php') ?>" class="btn btn-secondary">Cancel</a>
             </div>

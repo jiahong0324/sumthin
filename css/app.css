@@ -2567,4 +2567,1003 @@ body.dark-theme .db-error-pre {
     color: #f87171 !important;
 }
 
+/* ============================================================================
+ * TASK D5 & D6: Product Gallery, Drag & Drop, Slider, and Dashboard Charts
+ * ============================================================================ */
+
+/* Drag-and-Drop Upload Zone */
+.drop-zone {
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 32px 20px;
+    text-align: center;
+    background-color: #f8fafc;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    position: relative;
+}
+
+.drop-zone:hover,
+.drop-zone.dragover {
+    border-color: var(--primary);
+    background-color: #eff6ff;
+}
+
+.drop-zone-icon {
+    font-size: 36px;
+    margin-bottom: 8px;
+    display: block;
+}
+
+.drop-zone-text {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--dark);
+    margin-bottom: 4px;
+}
+
+.drop-zone-hint {
+    font-size: 12px;
+    color: var(--gray);
+}
+
+.thumbnails-preview {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 14px;
+}
+
+.thumb-item {
+    position: relative;
+    width: 80px;
+    height: 80px;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 2px solid var(--border);
+    background: #0b0f19;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.thumb-item img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.thumb-item .thumb-badge {
+    position: absolute;
+    bottom: 2px;
+    left: 2px;
+    right: 2px;
+    background: rgba(15, 23, 42, 0.85);
+    color: #fff;
+    font-size: 9px;
+    padding: 1px 4px;
+    border-radius: 3px;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Product Dynamic Photo Slider */
+.product-slider {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+}
+
+.slider-main-stage {
+    position: relative;
+    width: 100%;
+    height: 380px;
+    background: #0b0f19;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.slider-main-img {
+    max-width: 90%;
+    max-height: 90%;
+    object-fit: contain;
+    transition: opacity 0.25s ease-in-out;
+}
+
+.slider-arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 40px;
+    height: 40px;
+    background: rgba(15, 23, 42, 0.65);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    line-height: 1;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+    z-index: 5;
+}
+
+.slider-arrow:hover {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #ffffff;
+    transform: translateY(-50%) scale(1.08);
+}
+
+.slider-prev {
+    left: 12px;
+}
+
+.slider-next {
+    right: 12px;
+}
+
+.slider-thumbnails {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+}
+
+.slider-thumb-btn {
+    flex: 0 0 68px;
+    height: 68px;
+    border-radius: 8px;
+    border: 2px solid var(--border);
+    background: #0b0f19;
+    padding: 4px;
+    cursor: pointer;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.slider-thumb-btn img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.slider-thumb-btn:hover {
+    border-color: #93c5fd;
+}
+
+.slider-thumb-btn.active {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.35);
+}
+
+/* Low Stock Nav Badge */
+.badge-low-stock {
+    background-color: #ef4444;
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 800;
+    padding: 2px 7px;
+    border-radius: 10px;
+    margin-left: 6px;
+    vertical-align: middle;
+}
+
+/* Dashboard Charts Grid */
+.charts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+    gap: 24px;
+    margin-bottom: 32px;
+}
+
+.chart-card {
+    background: #ffffff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 22px;
+    box-shadow: var(--shadow-sm);
+}
+
+.chart-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+}
+
+.chart-card-title {
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--dark);
+    margin: 0;
+}
+
+.chart-container {
+    position: relative;
+    height: 280px;
+    width: 100%;
+}
+
+/* Top Selling Section on Storefront */
+.top-selling-section {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    border-radius: var(--radius);
+    padding: 28px 24px;
+    margin-bottom: 32px;
+    color: #ffffff;
+}
+
+.top-selling-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.top-selling-title {
+    font-size: 22px;
+    font-weight: 800;
+    color: #ffffff;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.top-selling-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+}
+
+.top-selling-card {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
+    padding: 14px;
+    text-decoration: none;
+    color: #ffffff;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.top-selling-card:hover {
+    transform: translateY(-4px);
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.top-selling-rank {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    width: 24px;
+    height: 24px;
+    background: #f59e0b;
+    color: #0f172a;
+    font-weight: 900;
+    font-size: 12px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.top-selling-img {
+    width: 100%;
+    height: 120px;
+    object-fit: contain;
+    margin-bottom: 10px;
+}
+
+/* Dark Theme Overrides */
+body.dark-theme .drop-zone {
+    background-color: #1e293b;
+    border-color: #334155;
+}
+
+body.dark-theme .drop-zone:hover,
+body.dark-theme .drop-zone.dragover {
+    background-color: #0f172a;
+    border-color: var(--primary);
+}
+
+body.dark-theme .chart-card {
+    background: #1e293b;
+    border-color: #334155;
+}
+
+body.dark-theme .chart-card-title {
+    color: #f1f5f9;
+}
+
+/* ==========================================================================
+   17. Batch 3a Component & Utility Classes (TASK C2)
+   Replaces static inline styles in admin/order_detail, admin/orders,
+   admin/index, admin/settings, admin/categories
+   ========================================================================== */
+
+/* Spacing & Sizing Utilities */
+.m-0        { margin: 0; }
+.mb-0       { margin-bottom: 0; }
+.mb-18      { margin-bottom: 18px; }
+.ml-4       { margin-left: 4px; }
+.p-20       { padding: 20px; }
+.p-24       { padding: 24px; }
+.p-26       { padding: 26px; }
+.p-28       { padding: 28px; }
+.p-40       { padding: 40px; }
+.pb-12      { padding-bottom: 12px; }
+.pt-18      { padding-top: 18px; }
+.w-50       { width: 50px; }
+.w-60       { width: 60px; }
+.w-120      { width: 120px; }
+
+.min-w-160  { min-width: 160px; }
+.min-w-180  { min-width: 180px; }
+.min-w-200  { min-width: 200px; }
+.min-w-240  { min-width: 240px; }
+
+/* Layout & Flex Utilities */
+.flex-1-5             { flex: 1.5; }
+.items-start          { align-items: flex-start; }
+.text-nowrap          { white-space: nowrap; }
+.text-decoration-none { text-decoration: none; }
+.border-bottom        { border-bottom: 1px solid var(--border); }
+
+/* Containers */
+.container-settings   { max-width: 850px; }
+
+/* Admin Dashboard & Summary (admin/index.php) */
+.admin-summary-banner {
+    background: #ffffff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 32px;
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.admin-summary-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    color: var(--gray);
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    display: block;
+}
+
+.admin-summary-col {
+    border-left: 1px solid var(--border);
+    padding-left: 20px;
+}
+
+.stat-card-link {
+    text-decoration: none;
+    display: block;
+    color: inherit;
+}
+
+.stat-card-danger {
+    border-left: 4px solid #ef4444 !important;
+}
+
+.stat-card-success {
+    border-left: 4px solid #10b981 !important;
+}
+
+.stat-value-danger {
+    color: #ef4444 !important;
+}
+
+.stat-value-success {
+    color: #10b981 !important;
+}
+
+.chart-empty-msg {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--gray);
+    font-size: 13px;
+}
+
+.inventory-healthy-box {
+    padding: 32px;
+    text-align: center;
+    color: #15803d;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 8px;
+}
+
+.product-table-thumb {
+    width: 44px;
+    height: 44px;
+    background: #0b0f19;
+    border-radius: 6px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.badge-stock-out {
+    background: #fee2e2;
+    color: #dc2626;
+    font-weight: 800;
+}
+
+.badge-stock-low {
+    background: #fef3c7;
+    color: #b45309;
+    font-weight: 800;
+}
+
+.table-empty-cell {
+    text-align: center;
+    color: var(--gray);
+    padding: 20px;
+}
+
+/* Category Maintenance (admin/categories.php) */
+.admin-two-col-grid {
+    display: grid;
+    grid-template-columns: 1fr 1.6fr;
+    gap: 32px;
+    align-items: start;
+}
+
+@media (max-width: 850px) {
+    .admin-two-col-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.card-title-sm {
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--dark);
+}
+
+.tr-active {
+    background: #eff6ff;
+}
+
+.btn-action-xs {
+    padding: 4px 8px;
+    font-size: 11px;
+}
+
+.category-form-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+    border-top: 1px solid var(--border);
+    padding-top: 18px;
+}
+
+/* Settings Page (admin/settings.php) */
+.settings-section-title {
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--dark);
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 10px;
+}
+
+.btn-save-settings {
+    padding: 14px;
+    font-size: 16px;
+}
+
+/* Admin Order Detail Page (admin/order_detail.php) */
+.order-status-locked-banner {
+    padding: 14px 18px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.badge-terminal-status {
+    font-size: 13px;
+    padding: 6px 12px;
+    font-weight: 800;
+    border: 1px solid currentColor;
+}
+
+.badge-delivered-terminal {
+    background: #ecfdf5;
+    color: #065f46;
+}
+
+.badge-cancelled-terminal {
+    background: #fef2f2;
+    color: #991b1b;
+}
+
+.form-hint-sm {
+    color: var(--gray);
+    font-size: 11px;
+    margin-top: 4px;
+    display: block;
+}
+
+.btn-save-fulfillment {
+    padding: 10px 24px;
+    font-weight: 700;
+}
+
+.order-item-thumb-admin {
+    width: 55px;
+    height: 55px;
+    background: #0b0f19;
+    border-radius: 6px;
+    overflow: hidden;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #1e293b;
+}
+
+.form-control[readonly],
+.form-control:read-only {
+    background: #f8fafc;
+    cursor: not-allowed;
+}
+
+/* Dark Theme Overrides for Batch 3a */
+body.dark-theme .admin-summary-banner,
+body.dark-theme .order-status-locked-banner {
+    background-color: #1e293b !important;
+    border-color: #334155 !important;
+}
+
+body.dark-theme .admin-summary-col {
+    border-left-color: #334155 !important;
+}
+
+body.dark-theme .settings-section-title,
+body.dark-theme .category-form-actions {
+    border-color: #334155 !important;
+}
+
+body.dark-theme .tr-active {
+    background-color: rgba(59, 130, 246, 0.15) !important;
+}
+
+body.dark-theme .badge-delivered-terminal {
+    background-color: rgba(6, 95, 70, 0.25) !important;
+    color: #34d399 !important;
+}
+
+body.dark-theme .badge-cancelled-terminal {
+    background-color: rgba(153, 27, 27, 0.25) !important;
+    color: #f87171 !important;
+}
+
+body.dark-theme .form-control[readonly],
+body.dark-theme .form-control:read-only {
+    background-color: #0b1120 !important;
+    color: #64748b !important;
+}
+
+body.dark-theme .inventory-healthy-box {
+    background-color: rgba(22, 163, 74, 0.15) !important;
+    border-color: rgba(34, 197, 94, 0.3) !important;
+    color: #4ade80 !important;
+}
+
+body.dark-theme .badge-stock-out {
+    background-color: rgba(220, 38, 38, 0.25) !important;
+    color: #f87171 !important;
+}
+
+body.dark-theme .badge-stock-low {
+    background-color: rgba(180, 83, 9, 0.25) !important;
+    color: #fbbf24 !important;
+}
+
+/* ==========================================================================
+   18. Batch 3b Component & Utility Classes (TASK C2)
+   Replaces static inline styles in admin/product_detail, admin/products,
+   admin/product_edit, admin/product_add, admin/members,
+   admin/member_detail, admin/member_add
+   ========================================================================== */
+
+/* Spacing & Sizing Utilities */
+.w-40         { width: 40px; }
+.min-w-80     { min-width: 80px; }
+.min-w-90     { min-width: 90px; }
+.min-w-100    { min-width: 100px; }
+.min-w-130    { min-width: 130px; }
+.min-w-140    { min-width: 140px; }
+.min-w-150    { min-width: 150px; }
+.min-w-170    { min-width: 170px; }
+.min-w-220    { min-width: 220px; }
+
+.fs-10        { font-size: 10px; }
+.fs-16        { font-size: 16px; }
+
+.mt-3         { margin-top: 3px; }
+.mt-14        { margin-top: 14px; }
+.mb-2         { margin-bottom: 2px; }
+.mb-3         { margin-bottom: 3px; }
+.mb-30        { margin-bottom: 30px; }
+.ml-6         { margin-left: 6px; }
+.pb-8         { padding-bottom: 8px; }
+.pb-10        { padding-bottom: 10px; }
+.pb-14        { padding-bottom: 14px; }
+.p-32         { padding: 32px; }
+
+.flex-2       { flex: 2; }
+.items-end    { align-items: flex-end; }
+.items-baseline { align-items: baseline; }
+.uppercase    { text-transform: uppercase; }
+.font-mono    { font-family: monospace; }
+.color-inherit { color: inherit; }
+.bg-white     { background-color: #ffffff; }
+
+/* Containers */
+.container-form-md     { max-width: 800px; }
+.container-member-form { max-width: 700px; }
+
+/* Product Add & Edit */
+.form-page-title {
+    font-size: 26px;
+    font-weight: 800;
+    color: var(--dark);
+    margin-top: 8px;
+}
+
+.notice-box {
+    padding: 14px;
+    background: #f8fafc;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--gray);
+}
+
+.photo-gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 16px;
+}
+
+.photo-gallery-card {
+    background: #f8fafc;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.photo-gallery-card.is-primary {
+    border-color: var(--primary);
+}
+
+.photo-gallery-thumb {
+    width: 100%;
+    height: 110px;
+    background: #0b0f19;
+    border-radius: 6px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 8px;
+}
+
+.badge-photo-primary {
+    background: #dcfce7;
+    color: #15803d;
+    font-size: 10px;
+    display: inline-block;
+    margin-bottom: 6px;
+}
+
+.badge-photo-gallery {
+    background: #f1f5f9;
+    color: var(--gray);
+    font-size: 10px;
+    display: inline-block;
+    margin-bottom: 6px;
+}
+
+.btn-action-block {
+    width: 100%;
+    font-size: 11px;
+    padding: 4px 6px;
+}
+
+/* Product Detail */
+.admin-product-detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1.3fr;
+    gap: 32px;
+}
+
+@media (max-width: 768px) {
+    .admin-product-detail-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.admin-product-detail-main-img-box {
+    background: #0b0f19;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid #1e293b;
+    height: 320px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 12px;
+}
+
+.product-mini-thumb {
+    width: 64px;
+    height: 64px;
+    background: #0b0f19;
+    border-radius: 6px;
+    border: 2px solid var(--border);
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.product-mini-thumb.is-primary {
+    border-color: var(--primary);
+}
+
+.product-mini-thumb-badge {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: #2563eb;
+    color: #ffffff;
+    font-size: 8px;
+    text-align: center;
+    font-weight: 700;
+}
+
+.product-price-lg {
+    font-size: 32px;
+    font-weight: 900;
+    color: var(--dark);
+}
+
+.product-detail-desc {
+    font-size: 14px;
+    color: var(--dark);
+    line-height: 1.7;
+}
+
+.review-stars-summary {
+    font-size: 14px;
+    color: #d97706;
+    font-weight: 700;
+}
+
+.review-star-rating {
+    color: #d97706;
+    font-weight: 700;
+    font-size: 13px;
+}
+
+/* Products List */
+.btn-h40 {
+    height: 40px;
+}
+
+.btn-filter-h {
+    height: 38px;
+}
+
+.batch-toolbar {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: var(--radius);
+    padding: 12px 18px;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.batch-toolbar-count {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1e40af;
+}
+
+.product-item-thumb {
+    width: 52px;
+    height: 52px;
+    background: #0b0f19;
+    border-radius: 6px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #1e293b;
+}
+
+.text-truncate-desc {
+    max-width: 380px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.badge-featured {
+    color: #d97706;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.badge-stock-healthy {
+    background: #dcfce7;
+    color: #15803d;
+}
+
+/* Members Management */
+.admin-member-detail-grid {
+    display: grid;
+    grid-template-columns: 180px 1fr;
+    gap: 24px;
+}
+
+@media (max-width: 650px) {
+    .admin-member-detail-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.member-avatar-lg {
+    width: 130px;
+    height: 130px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 3px solid var(--primary);
+    margin: 0 auto 12px auto;
+    background: #f1f5f9;
+}
+
+.member-avatar-sm {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: #e2e8f0;
+    border: 1px solid var(--border);
+}
+
+.img-cover-full {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.badge-info {
+    background: #e0f2fe;
+    color: #0369a1;
+}
+
+.badge-warning {
+    background: #fef3c7;
+    color: #b45309;
+}
+
+.badge-xs {
+    font-size: 10px;
+    padding: 1px 6px;
+}
+
+.btn-outline-success {
+    color: var(--success);
+    border-color: #86efac;
+}
+
+.btn-outline-success:hover {
+    background-color: var(--success-bg);
+}
+
+/* Dark Theme Overrides for Batch 3b */
+body.dark-theme .notice-box {
+    background-color: #1e293b !important;
+    border-color: #334155 !important;
+    color: #94a3b8 !important;
+}
+
+body.dark-theme .photo-gallery-card {
+    background-color: #0f172a !important;
+    border-color: #334155 !important;
+}
+
+body.dark-theme .photo-gallery-card.is-primary {
+    border-color: var(--primary) !important;
+}
+
+body.dark-theme .badge-photo-primary,
+body.dark-theme .badge-stock-healthy {
+    background-color: rgba(21, 128, 61, 0.25) !important;
+    color: #4ade80 !important;
+}
+
+body.dark-theme .badge-photo-gallery {
+    background-color: #1e293b !important;
+    color: #94a3b8 !important;
+}
+
+body.dark-theme .batch-toolbar {
+    background-color: #1e293b !important;
+    border-color: #3b82f6 !important;
+}
+
+body.dark-theme .batch-toolbar-count {
+    color: #93c5fd !important;
+}
+
+body.dark-theme .batch-toolbar .btn-outline-sm {
+    background-color: #0f172a !important;
+}
+
+body.dark-theme .badge-info {
+    background-color: rgba(3, 105, 161, 0.25) !important;
+    color: #7dd3fc !important;
+}
+
+body.dark-theme .badge-warning {
+    background-color: rgba(180, 83, 9, 0.25) !important;
+    color: #fbbf24 !important;
+}
+
+body.dark-theme .member-avatar-lg,
+body.dark-theme .member-avatar-sm {
+    background-color: #0f172a !important;
+    border-color: #334155 !important;
+}
+
+
 

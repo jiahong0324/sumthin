@@ -60,26 +60,26 @@ $title = 'Gadget: ' . $p->name;
 require_once __DIR__ . '/../_head.php';
 ?>
 
-<div class="container" style="max-width: 950px;">
+<div class="container container-history">
     <!-- Breadcrumb & Navigation -->
-    <div style="margin-bottom: 24px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+    <div class="flex-between flex-wrap gap-12 mb-24">
         <div>
             <a href="<?= base_url('admin/products.php') ?>" class="form-link">&larr; Back to Product List</a>
-            <h1 style="font-size:26px; font-weight:800; color:var(--dark); margin-top:6px;">
+            <h1 class="page-title mt-6">
                 <?= encode($p->name) ?>
             </h1>
-            <span class="role-pill pill-member" style="font-size:12px;">
+            <span class="role-pill pill-member fs-12">
                 <?= encode($p->brand_name ?? 'sumthin') ?> &bull; <?= encode($p->category_name) ?>
             </span>
         </div>
-        <div style="display:flex; gap:8px;">
+        <div class="d-flex gap-8">
             <a href="<?= base_url('admin/product_edit.php?id=' . (int)$p->id) ?>" class="btn btn-primary-sm">
                 Edit Gadget
             </a>
-            <form action="<?= base_url('admin/product_delete.php') ?>" method="POST" style="display:inline;">
+            <form action="<?= base_url('admin/product_delete.php') ?>" method="POST" class="d-inline">
                 <?= csrf_field() ?>
                 <input type="hidden" name="id" value="<?= (int)$p->id ?>">
-                <button type="submit" class="btn btn-outline-sm" style="color:var(--error); border-color:#fca5a5;" data-confirm="Are you sure you want to delete this gadget?">
+                <button type="submit" class="btn btn-outline-sm btn-outline-danger" data-confirm="Are you sure you want to delete this gadget?">
                     Delete
                 </button>
             </form>
@@ -87,70 +87,88 @@ require_once __DIR__ . '/../_head.php';
     </div>
 
     <!-- Product Layout Grid -->
-    <div style="display:grid; grid-template-columns: 1fr 1.3fr; gap:32px; background:#fff; border:1px solid var(--border); border-radius:var(--radius); padding:32px; margin-bottom:32px;">
-        <!-- Photo Preview -->
+    <div class="card-panel p-32 mb-32 admin-product-detail-grid">
+        <!-- Photo Preview & All Gallery Photos -->
         <div>
-            <div style="background:#0b0f19; border-radius:10px; overflow:hidden; border:1px solid #1e293b; height:320px; display:flex; align-items:center; justify-content:center; margin-bottom:12px;">
+            <div class="admin-product-detail-main-img-box">
                 <img src="<?= base_url('uploads/products/' . encode($p->photo_url)) ?>" 
                      alt="<?= encode($p->name) ?>" 
-                     style="max-width:100%; max-height:100%; object-fit:contain;">
+                     id="admin-detail-main-img"
+                     class="order-thumb-img">
             </div>
-            <div style="font-size:12px; color:var(--gray); text-align:center;">
-                Filename: <code><?= encode($p->photo_url) ?></code>
+
+            <!-- All Product Photos Showcase -->
+            <div class="mt-14">
+                <div class="flex-between fs-12 fw-700 text-dark mb-8">
+                    <span>All Gallery Photos (<?= count($all_photos) ?>)</span>
+                    <a href="<?= base_url('admin/product_edit.php?id=' . (int)$p->id) ?>" class="form-link fs-11">Manage Photos &rarr;</a>
+                </div>
+                <div class="d-flex gap-8 flex-wrap">
+                    <?php foreach ($all_photos as $idx => $ph): ?>
+                        <div class="product-mini-thumb <?= $ph->is_primary ? 'is-primary' : '' ?>" title="<?= encode($ph->photo_url) ?>">
+                            <img src="<?= base_url('uploads/products/' . encode($ph->photo_url)) ?>" 
+                                 alt="Photo <?= $idx + 1 ?>" 
+                                 class="order-thumb-img">
+                            <?php if ($ph->is_primary): ?>
+                                <span class="product-mini-thumb-badge">PRI</span>
+                            <?php endif; ?>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
             </div>
         </div>
 
         <!-- Specifications & Stats -->
         <div>
-            <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:20px; border-bottom:1px solid var(--border); padding-bottom:14px;">
+            <div class="flex-between items-baseline mb-20 border-bottom pb-14">
                 <div>
-                    <span style="font-size:12px; color:var(--gray); text-transform:uppercase; font-weight:700;">Price</span>
-                    <div style="font-size:32px; font-weight:900; color:var(--dark);">
+                    <span class="fs-12 text-muted uppercase fw-700">Price</span>
+                    <div class="product-price-lg">
                         RM <?= number_format((float)$p->price, 2) ?>
                     </div>
                 </div>
-                <div style="text-align:right;">
-                    <span style="font-size:12px; color:var(--gray); text-transform:uppercase; font-weight:700;">Stock Inventory</span>
+                <div class="text-right">
+                    <span class="fs-12 text-muted uppercase fw-700">Stock Inventory</span>
                     <div>
                         <?php if ($p->stock == 0): ?>
                             <span class="role-pill pill-admin">Out of Stock (0)</span>
                         <?php elseif ($p->stock <= 15): ?>
-                            <span class="role-pill" style="background:#fef3c7; color:#b45309;">Low Stock (<?= (int)$p->stock ?> units)</span>
+                            <span class="role-pill badge-stock-low">Low Stock (<?= (int)$p->stock ?> units)</span>
                         <?php else: ?>
-                            <span class="role-pill" style="background:#dcfce7; color:#15803d;">Healthy Stock (<?= (int)$p->stock ?> units)</span>
+                            <span class="role-pill badge-stock-healthy">Healthy Stock (<?= (int)$p->stock ?> units)</span>
                         <?php endif; ?>
                     </div>
                 </div>
             </div>
 
             <!-- Description -->
-            <div style="margin-bottom:24px;">
-                <h3 style="font-size:14px; font-weight:700; color:var(--dark-muted); text-transform:uppercase; margin-bottom:8px;">Description & Key Specs</h3>
-                <p style="font-size:14px; color:var(--dark); line-height:1.7;">
+            <div class="mb-24">
+                <h3 class="order-sidebar-title fs-14 mb-8">Description & Key Specs</h3>
+                <p class="product-detail-desc">
                     <?= nl2br(encode($p->description)) ?>
                 </p>
             </div>
 
             <!-- Metadata Table -->
-            <table class="table-custom" style="font-size:13px;">
+            <table class="table-custom fs-13">
                 <tr>
-                    <td style="font-weight:700; width:130px; color:var(--dark-muted);">Product ID</td>
+                    <td class="fw-700 min-w-130 text-dark-muted">Product ID</td>
                     <td>#<?= (int)$p->id ?></td>
                 </tr>
                 <tr>
-                    <td style="font-weight:700; color:var(--dark-muted);">URL Slug</td>
+                    <td class="fw-700 text-dark-muted">URL Slug</td>
                     <td><code><?= encode($p->slug) ?></code></td>
                 </tr>
                 <tr>
-                    <td style="font-weight:700; color:var(--dark-muted);">Catalog Visibility</td>
+                    <td class="fw-700 text-dark-muted">Catalog Visibility</td>
                     <td><?= $p->is_featured ? '★ Featured on Storefront Hero' : 'Standard Catalog' ?></td>
                 </tr>
                 <tr>
-                    <td style="font-weight:700; color:var(--dark-muted);">Date Created</td>
+                    <td class="fw-700 text-dark-muted">Date Created</td>
                     <td><?= encode(date('d M Y, h:i A', strtotime($p->created_at))) ?></td>
                 </tr>
                 <tr>
-                    <td style="font-weight:700; color:var(--dark-muted);">Last Updated</td>
+                    <td class="fw-700 text-dark-muted">Last Updated</td>
                     <td><?= encode(date('d M Y, h:i A', strtotime($p->updated_at))) ?></td>
                 </tr>
             </table>
@@ -158,30 +176,30 @@ require_once __DIR__ . '/../_head.php';
     </div>
 
     <!-- Customer Reviews Panel -->
-    <div style="background:#fff; border:1px solid var(--border); border-radius:var(--radius); padding:28px;">
+    <div class="card-panel p-28">
         <div class="section-title-wrap">
             <h2 class="section-title">Verified Customer Reviews (<?= count($reviews) ?>)</h2>
             <?php if (!empty($reviews)): ?>
-                <span style="font-size:14px; color:#d97706; font-weight:700;">★ <?= $avg_rating ?> / 5.0 Average</span>
+                <span class="review-stars-summary">★ <?= $avg_rating ?> / 5.0 Average</span>
             <?php endif; ?>
         </div>
 
         <?php if (empty($reviews)): ?>
-            <p style="color:var(--gray); font-size:14px;">No customer reviews have been submitted for this gadget yet.</p>
+            <p class="text-muted fs-14">No customer reviews have been submitted for this gadget yet.</p>
         <?php else: ?>
-            <div style="display:flex; flex-direction:column; gap:16px;">
+            <div class="d-flex flex-col gap-16">
                 <?php foreach ($reviews as $rev): ?>
-                    <div style="border-bottom:1px solid var(--border); padding-bottom:14px;">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                    <div class="border-bottom pb-14">
+                        <div class="flex-between mb-4">
                             <strong><?= encode($rev->reviewer_name) ?></strong>
-                            <span style="color:#d97706; font-weight:700; font-size:13px;">
+                            <span class="review-star-rating">
                                 <?= str_repeat('★', (int)$rev->rating) ?><?= str_repeat('☆', 5 - (int)$rev->rating) ?> (<?= (int)$rev->rating ?>/5)
                             </span>
                         </div>
-                        <p style="font-size:13px; color:var(--dark); margin-bottom:6px;">
+                        <p class="fs-13 text-dark mb-6">
                             <?= encode($rev->comment) ?>
                         </p>
-                        <span style="font-size:11px; color:var(--gray);">
+                        <span class="fs-11 text-muted">
                             Reviewed on <?= encode(date('d M Y', strtotime($rev->created_at))) ?>
                         </span>
                     </div>

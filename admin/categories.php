@@ -136,25 +136,25 @@ require_once __DIR__ . '/../_head.php';
     <!-- Header -->
     <div class="admin-header-panel">
         <div>
-            <h1 style="font-size:24px; font-weight:800; color:var(--dark);">Category Maintenance</h1>
-            <p style="font-size:14px; color:var(--gray); margin-top:4px;">
+            <h1 class="page-title">Category Maintenance</h1>
+            <p class="page-subtitle mt-4">
                 Organize store hierarchy, create new merchandise lines, and manage catalog classifications.
             </p>
         </div>
-        <span class="role-pill pill-member" style="font-size:13px; padding:6px 14px;">
+        <span class="role-pill pill-member pill-counter">
             <?= count($categories) ?> Active Categories
         </span>
     </div>
 
-    <div style="display:grid; grid-template-columns: 1fr 1.6fr; gap:32px; align-items:start;">
+    <div class="admin-two-col-grid">
         <!-- Left Column: Add / Edit Form -->
-        <div style="background:#fff; border:1px solid var(--border); border-radius:var(--radius); padding:28px; box-shadow:var(--shadow-sm);">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; border-bottom:1px solid var(--border); padding-bottom:12px;">
-                <h2 style="font-size:18px; font-weight:800; color:var(--dark);">
+        <div class="card-panel p-28">
+            <div class="flex-between mb-18 pb-12 border-bottom">
+                <h2 class="card-title-sm">
                     <?= $edit_id > 0 ? 'Edit Category' : 'Create New Category' ?>
                 </h2>
                 <?php if ($edit_id > 0): ?>
-                    <a href="<?= base_url('admin/categories.php') ?>" class="form-link" style="font-size:12px;">+ Switch to Create</a>
+                    <a href="<?= base_url('admin/categories.php') ?>" class="form-link fs-12">+ Switch to Create</a>
                 <?php endif; ?>
             </div>
 
@@ -193,7 +193,7 @@ require_once __DIR__ . '/../_head.php';
                     <?= err('description') ?>
                 </div>
 
-                <div style="display:flex; gap:10px; margin-top:20px; border-top:1px solid var(--border); padding-top:18px;">
+                <div class="category-form-actions">
                     <button type="submit" class="btn btn-primary">
                         <?= $edit_id > 0 ? 'Update Category' : 'Save Category' ?>
                     </button>
@@ -205,52 +205,52 @@ require_once __DIR__ . '/../_head.php';
         </div>
 
         <!-- Right Column: Category Directory Table -->
-        <div style="background:#fff; border:1px solid var(--border); border-radius:var(--radius); padding:24px; box-shadow:var(--shadow-sm);">
-            <div style="margin-bottom:16px;">
-                <h2 style="font-size:18px; font-weight:800; color:var(--dark);">All Product Categories</h2>
-                <span style="font-size:13px; color:var(--gray);">Click on a category to view or edit</span>
+        <div class="card-panel p-24">
+            <div class="mb-16">
+                <h2 class="card-title-sm">All Product Categories</h2>
+                <span class="fs-13 text-muted">Click on a category to view or edit</span>
             </div>
 
             <div class="table-responsive">
                 <table class="table-custom">
                     <thead>
                         <tr>
-                            <th style="width:50px;">ID</th>
+                            <th class="w-50">ID</th>
                             <th>Name & Description</th>
                             <th>Slug</th>
-                            <th style="text-align:center;">Products</th>
-                            <th style="text-align:right;">Actions</th>
+                            <th class="text-center">Products</th>
+                            <th class="text-right">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php foreach ($categories as $cat): ?>
-                            <tr <?= ($edit_id === (int)$cat->id) ? 'style="background:#eff6ff;"' : '' ?>>
+                            <tr <?= ($edit_id === (int)$cat->id) ? 'class="tr-active"' : '' ?>>
                                 <td><strong>#<?= (int)$cat->id ?></strong></td>
                                 <td>
-                                    <div style="font-weight:700; color:var(--dark);"><?= encode($cat->name) ?></div>
+                                    <div class="fw-700 text-dark"><?= encode($cat->name) ?></div>
                                     <?php if ($cat->description): ?>
-                                        <div style="font-size:12px; color:var(--gray); margin-top:2px;">
+                                        <div class="fs-12 text-muted mt-2">
                                             <?= encode(substr($cat->description, 0, 75)) ?><?= strlen($cat->description) > 75 ? '...' : '' ?>
                                         </div>
                                     <?php endif; ?>
                                 </td>
                                 <td>
-                                    <code style="font-size:11px;"><?= encode($cat->slug) ?></code>
+                                    <code class="fs-11"><?= encode($cat->slug) ?></code>
                                 </td>
-                                <td style="text-align:center;">
-                                    <a href="<?= base_url('admin/products.php?cat_id=' . (int)$cat->id) ?>" class="role-pill pill-member" style="text-decoration:none; font-size:11px;">
+                                <td class="text-center">
+                                    <a href="<?= base_url('admin/products.php?cat_id=' . (int)$cat->id) ?>" class="role-pill pill-member text-decoration-none fs-11">
                                         <?= (int)$cat->product_count ?> gadget(s)
                                     </a>
                                 </td>
-                                <td style="text-align:right; white-space:nowrap;">
-                                    <a href="<?= base_url('admin/categories.php?edit_id=' . (int)$cat->id) ?>" class="btn btn-outline-sm" style="padding:4px 8px; font-size:11px;">
+                                <td class="text-right text-nowrap">
+                                    <a href="<?= base_url('admin/categories.php?edit_id=' . (int)$cat->id) ?>" class="btn btn-outline-sm btn-action-xs">
                                         Edit
                                     </a>
-                                    <form action="<?= base_url('admin/categories.php') ?>" method="POST" style="display:inline;">
+                                    <form action="<?= base_url('admin/categories.php') ?>" method="POST" class="d-inline">
                                         <?= csrf_field() ?>
                                         <input type="hidden" name="post_action" value="delete">
                                         <input type="hidden" name="id" value="<?= (int)$cat->id ?>">
-                                        <button type="submit" class="btn btn-outline-sm" style="padding:4px 8px; font-size:11px; color:var(--error); border-color:#fca5a5;" data-confirm="Are you sure you want to delete '<?= encode($cat->name) ?>'?">
+                                        <button type="submit" class="btn btn-outline-sm btn-action-xs btn-outline-danger" data-confirm="Are you sure you want to delete '<?= encode($cat->name) ?>'?">
                                             Delete
                                         </button>
                                     </form>

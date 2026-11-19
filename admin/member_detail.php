@@ -47,27 +47,27 @@ $title = 'Member: ' . $m->name;
 require_once __DIR__ . '/../_head.php';
 ?>
 
-<div class="container" style="max-width: 950px;">
+<div class="container container-history">
     <!-- Breadcrumb & Top Bar -->
-    <div style="margin-bottom: 24px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+    <div class="flex-between flex-wrap gap-12 mb-24">
         <div>
             <a href="<?= base_url('admin/members.php') ?>" class="form-link">&larr; Back to Member Directory</a>
-            <h1 style="font-size:26px; font-weight:800; color:var(--dark); margin-top:6px;"><?= encode($m->name) ?></h1>
-            <span style="font-size:13px; color:var(--gray);"><?= encode($m->email) ?></span>
+            <h1 class="page-title mt-6"><?= encode($m->name) ?></h1>
+            <span class="fs-13 text-muted"><?= encode($m->email) ?></span>
         </div>
-        <div style="display:flex; gap:8px; align-items:center;">
+        <div class="d-flex gap-8 items-center">
             <a href="<?= base_url('admin/email_send.php?member_id=' . (int)$m->id) ?>" class="btn btn-primary-sm">
                 ✉ Send Email
             </a>
-            <form action="<?= base_url('admin/member_toggle_status.php') ?>" method="POST" style="display:inline;">
+            <form action="<?= base_url('admin/member_toggle_status.php') ?>" method="POST" class="d-inline">
                 <?= csrf_field() ?>
                 <input type="hidden" name="id" value="<?= (int)$m->id ?>">
                 <?php if ($m->status === 'Active'): ?>
-                    <button type="submit" class="btn btn-outline-sm" style="color:var(--error); border-color:#fca5a5;" data-confirm="Suspend this member account?">
+                    <button type="submit" class="btn btn-outline-sm btn-outline-danger" data-confirm="Suspend this member account?">
                         Suspend Account
                     </button>
                 <?php else: ?>
-                    <button type="submit" class="btn btn-outline-sm" style="color:var(--success); border-color:#86efac;" data-confirm="Reactivate this member account?">
+                    <button type="submit" class="btn btn-outline-sm btn-outline-success" data-confirm="Reactivate this member account?">
                         Reactivate Account
                     </button>
                 <?php endif; ?>
@@ -76,60 +76,60 @@ require_once __DIR__ . '/../_head.php';
     </div>
 
     <!-- Member Profile Overview Card -->
-    <div style="display:grid; grid-template-columns: 180px 1fr; gap:24px; background:#fff; border:1px solid var(--border); border-radius:var(--radius); padding:28px; margin-bottom:30px; box-shadow:var(--shadow-sm);">
-        <div style="text-align:center;">
-            <div style="width:130px; height:130px; border-radius:50%; overflow:hidden; border:3px solid var(--primary); margin:0 auto 12px auto; background:#f1f5f9;">
+    <div class="card-panel p-28 mb-30 admin-member-detail-grid">
+        <div class="text-center">
+            <div class="member-avatar-lg">
                 <img src="<?= base_url('uploads/members/' . encode($m->photo ?? 'default_user.png')) ?>" 
                      alt="<?= encode($m->name) ?>" 
-                     style="width:100%; height:100%; object-fit:cover;">
+                     class="img-cover-full">
             </div>
-            <span class="role-pill <?= $m->status === 'Active' ? 'pill-member' : 'pill-admin' ?>" style="font-size:12px;">
+            <span class="role-pill <?= $m->status === 'Active' ? 'pill-member' : 'pill-admin' ?> fs-12">
                 Status: <?= encode($m->status) ?>
             </span>
-            <div style="margin-top: 8px;">
+            <div class="mt-8">
                 <?php if (!empty($m->email_verified_at)): ?>
-                    <span class="role-pill" style="background:#e0f2fe; color:#0369a1; font-size:11px;">✓ Verified</span>
+                    <span class="role-pill badge-info fs-11">✓ Verified</span>
                 <?php else: ?>
-                    <span class="role-pill" style="background:#fef3c7; color:#b45309; font-size:11px;">⚠ Unverified</span>
+                    <span class="role-pill badge-warning fs-11">⚠ Unverified</span>
                 <?php endif; ?>
             </div>
         </div>
 
         <div>
-            <h3 style="font-size:16px; font-weight:700; color:var(--dark); margin-bottom:12px; border-bottom:1px solid var(--border); padding-bottom:8px;">
+            <h3 class="card-title-sm fs-16 mb-12 border-bottom pb-8">
                 Customer Account Information
             </h3>
-            <table class="table-custom" style="font-size:13px;">
+            <table class="table-custom fs-13">
                 <tr>
-                    <td style="font-weight:700; width:160px; color:var(--dark-muted);">Customer ID</td>
+                    <td class="fw-700 min-w-160 text-dark-muted">Customer ID</td>
                     <td>#<?= (int)$m->id ?></td>
                 </tr>
                 <tr>
-                    <td style="font-weight:700; color:var(--dark-muted);">Email Verification</td>
+                    <td class="fw-700 text-dark-muted">Email Verification</td>
                     <td>
                         <?php if (!empty($m->email_verified_at)): ?>
-                            <span class="role-pill" style="background:#e0f2fe; color:#0369a1; font-size:11px;">Verified</span>
-                            <span style="font-size:12px; color:var(--gray); margin-left:6px;">(Verified on <?= encode(date('d F Y, h:i A', strtotime($m->email_verified_at))) ?>)</span>
+                            <span class="role-pill badge-info fs-11">Verified</span>
+                            <span class="fs-12 text-muted ml-6">(Verified on <?= encode(date('d F Y, h:i A', strtotime($m->email_verified_at))) ?>)</span>
                         <?php else: ?>
-                            <span class="role-pill" style="background:#fef3c7; color:#b45309; font-size:11px;">Unverified</span>
-                            <span style="font-size:12px; color:var(--gray); margin-left:6px;">(Pending user verification)</span>
+                            <span class="role-pill badge-warning fs-11">Unverified</span>
+                            <span class="fs-12 text-muted ml-6">(Pending user verification)</span>
                         <?php endif; ?>
                     </td>
                 </tr>
                 <tr>
-                    <td style="font-weight:700; color:var(--dark-muted);">Phone Number</td>
+                    <td class="fw-700 text-dark-muted">Phone Number</td>
                     <td><?= encode($m->phone ?? 'Not provided') ?></td>
                 </tr>
                 <tr>
-                    <td style="font-weight:700; color:var(--dark-muted);">Registration Date</td>
+                    <td class="fw-700 text-dark-muted">Registration Date</td>
                     <td><?= encode(date('d F Y, h:i A', strtotime($m->created_at))) ?></td>
                 </tr>
                 <tr>
-                    <td style="font-weight:700; color:var(--dark-muted);">Failed Logins</td>
+                    <td class="fw-700 text-dark-muted">Failed Logins</td>
                     <td>
                         <?= (int)$m->failed_attempts ?> attempt(s)
                         <?php if ($m->locked_until && strtotime($m->locked_until) > time()): ?>
-                            <span style="color:var(--error); font-weight:700;"> (Locked until <?= encode($m->locked_until) ?>)</span>
+                            <span class="text-danger fw-700"> (Locked until <?= encode($m->locked_until) ?>)</span>
                         <?php endif; ?>
                     </td>
                 </tr>
@@ -138,10 +138,10 @@ require_once __DIR__ . '/../_head.php';
     </div>
 
     <!-- Order History for this Member -->
-    <div style="background:#fff; border:1px solid var(--border); border-radius:var(--radius); padding:28px; box-shadow:var(--shadow-sm);">
+    <div class="card-panel p-28">
         <div class="section-title-wrap">
             <h2 class="section-title">Order History (<?= count($orders) ?>)</h2>
-            <span style="font-size:13px; color:var(--gray);">Purchases made by <?= encode($m->name) ?></span>
+            <span class="fs-13 text-muted">Purchases made by <?= encode($m->name) ?></span>
         </div>
 
         <div class="table-responsive">
@@ -158,7 +158,7 @@ require_once __DIR__ . '/../_head.php';
                 </thead>
                 <tbody>
                     <?php if (empty($orders)): ?>
-                        <tr><td colspan="6" style="text-align:center; padding:30px; color:var(--gray);">No orders placed yet.</td></tr>
+                        <tr><td colspan="6" class="table-empty-cell">No orders placed yet.</td></tr>
                     <?php else: ?>
                         <?php foreach ($orders as $ord): ?>
                             <tr>
@@ -167,10 +167,10 @@ require_once __DIR__ . '/../_head.php';
                                 <td><?= (int)$ord->total_items ?> item(s)</td>
                                 <td><strong>RM <?= number_format((float)$ord->final_amount, 2) ?></strong></td>
                                 <td>
-                                    <span class="role-pill pill-member" style="font-size:11px;"><?= encode($ord->status) ?></span>
+                                    <span class="role-pill pill-member fs-11"><?= encode($ord->status) ?></span>
                                 </td>
                                 <td>
-                                    <span class="role-pill" style="background:#dcfce7; color:#15803d; font-size:11px;"><?= encode($ord->payment_status) ?></span>
+                                    <span class="role-pill badge-stock-healthy fs-11"><?= encode($ord->payment_status) ?></span>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
