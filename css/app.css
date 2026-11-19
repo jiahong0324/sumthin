@@ -4060,6 +4060,759 @@ body.dark-theme .btn-back-to-top:hover {
     background-color: #2563eb;
 }
 
+/* ==========================================================================
+   Shopee-Style Complete E-Commerce Platform System Styles
+   ========================================================================== */
+
+/* 1. Shopee Mall Tag on Logo */
+.shopee-mall-tag {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: #ffffff;
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-left: 6px;
+    box-shadow: 0 1px 3px rgba(220, 38, 38, 0.3);
+}
+
+/* 2. Shopee Header Central Search Bar */
+.site-header {
+    padding: 10px 0;
+}
+.header-inner {
+    height: auto;
+    min-height: 76px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+.header-search-wrap {
+    flex: 1;
+    max-width: 580px;
+    position: relative;
+}
+.header-search-form {
+    display: flex;
+    position: relative;
+    border: 2px solid var(--primary);
+    border-radius: 8px;
+    overflow: hidden;
+    background-color: #ffffff;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+.header-search-input {
+    flex: 1;
+    border: none;
+    outline: none;
+    padding: 10px 16px;
+    font-size: 14px;
+    color: var(--dark);
+    background: transparent;
+}
+.header-search-input::placeholder {
+    color: #94a3b8;
+}
+.header-search-btn {
+    background-color: var(--primary);
+    color: #ffffff;
+    border: none;
+    padding: 0 20px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.header-search-btn:hover {
+    background-color: var(--primary-hover);
+}
+.header-hot-tags {
+    display: flex;
+    gap: 12px;
+    margin-top: 5px;
+    font-size: 12px;
+    overflow-x: auto;
+    white-space: nowrap;
+}
+.hot-tag {
+    color: var(--gray);
+    text-decoration: none;
+    transition: color 0.15s ease;
+}
+.hot-tag:hover {
+    color: var(--primary);
+}
+
+body.dark-theme .header-search-form {
+    background-color: #1e293b;
+    border-color: #3b82f6;
+}
+body.dark-theme .header-search-input {
+    color: #f8fafc;
+}
+body.dark-theme .header-search-input::placeholder {
+    color: #64748b;
+}
+
+/* 3. Shopee Hero Promotional Banner Grid & Slider */
+.shopee-hero-wrap {
+    display: grid;
+    grid-template-columns: 2.3fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+@media (max-width: 900px) {
+    .shopee-hero-wrap {
+        grid-template-columns: 1fr;
+    }
+}
+.shopee-carousel {
+    position: relative;
+    border-radius: 12px;
+    overflow: hidden;
+    height: 310px;
+    box-shadow: var(--shadow);
+    background: #0b0f19;
+}
+.shopee-slide {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    padding: 40px 48px;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.5s ease, visibility 0.5s ease;
+    color: #ffffff;
+}
+.shopee-slide.active {
+    opacity: 1;
+    visibility: visible;
+}
+.shopee-slide-1 {
+    background: linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%);
+}
+.shopee-slide-2 {
+    background: linear-gradient(135deg, #065f46 0%, #0f172a 100%);
+}
+.shopee-slide-3 {
+    background: linear-gradient(135deg, #701a75 0%, #0f172a 100%);
+}
+.shopee-slide-content {
+    max-width: 480px;
+    z-index: 2;
+}
+.shopee-slide-badge {
+    display: inline-block;
+    background: rgba(255, 255, 255, 0.18);
+    color: #f8fafc;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    margin-bottom: 12px;
+}
+.shopee-slide-title {
+    font-size: 28px;
+    font-weight: 900;
+    line-height: 1.2;
+    margin-bottom: 10px;
+    color: #ffffff;
+}
+.shopee-slide-desc {
+    font-size: 14px;
+    color: #cbd5e1;
+    margin-bottom: 20px;
+    line-height: 1.4;
+}
+.shopee-slide-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #ffffff;
+    color: #0f172a;
+    font-weight: 800;
+    font-size: 13px;
+    padding: 10px 22px;
+    border-radius: 8px;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+.shopee-slide-btn:hover {
+    background: #f1f5f9;
+    transform: translateY(-2px);
+}
+.shopee-carousel-arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 38px;
+    height: 38px;
+    background: rgba(0, 0, 0, 0.45);
+    color: #ffffff;
+    border: none;
+    border-radius: 50%;
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 10;
+    transition: background 0.2s ease;
+}
+.shopee-carousel-arrow:hover {
+    background: rgba(0, 0, 0, 0.75);
+}
+.shopee-carousel-prev { left: 14px; }
+.shopee-carousel-next { right: 14px; }
+.shopee-carousel-dots {
+    position: absolute;
+    bottom: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 8px;
+    z-index: 10;
+}
+.shopee-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.4);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.shopee-dot.active {
+    width: 24px;
+    border-radius: 10px;
+    background: #ffffff;
+}
+
+/* Side Promos */
+.shopee-side-promos {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+.shopee-promo-card {
+    flex: 1;
+    border-radius: 12px;
+    padding: 22px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    color: #ffffff;
+    text-decoration: none;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+.shopee-promo-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lg);
+}
+.shopee-promo-1 {
+    background: linear-gradient(135deg, #c2410c 0%, #ea580c 100%);
+}
+.shopee-promo-2 {
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.shopee-promo-badge {
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    background: rgba(0, 0, 0, 0.25);
+    padding: 2px 8px;
+    border-radius: 4px;
+    align-self: flex-start;
+    margin-bottom: 8px;
+}
+.shopee-promo-title {
+    font-size: 17px;
+    font-weight: 800;
+    margin-bottom: 4px;
+}
+.shopee-promo-sub {
+    font-size: 12px;
+    opacity: 0.9;
+}
+
+/* 4. Shopee 4-Point Trust & Perks Strip */
+.shopee-trust-strip {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    background-color: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    margin-bottom: 28px;
+    box-shadow: var(--shadow-sm);
+    gap: 16px;
+}
+@media (max-width: 768px) {
+    .shopee-trust-strip {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+.shopee-trust-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.trust-icon {
+    font-size: 26px;
+    flex-shrink: 0;
+}
+.trust-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--dark);
+    margin-bottom: 2px;
+}
+.trust-desc {
+    font-size: 11px;
+    color: var(--gray);
+}
+body.dark-theme .trust-title {
+    color: #f8fafc;
+}
+
+/* 5. Shopee Flash Sale / Shocking Deals Section */
+.shopee-flash-section {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    margin-bottom: 28px;
+    box-shadow: var(--shadow-sm);
+}
+.shopee-flash-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 18px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+}
+.flash-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+.flash-title {
+    font-size: 20px;
+    font-weight: 900;
+    color: #ea580c;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    letter-spacing: -0.5px;
+}
+.flash-countdown {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--dark);
+}
+.countdown-box {
+    background: #0f172a;
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 800;
+    padding: 3px 6px;
+    border-radius: 4px;
+    min-width: 24px;
+    text-align: center;
+}
+.shopee-flash-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+}
+@media (max-width: 900px) {
+    .shopee-flash-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+.shopee-flash-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    text-decoration: none;
+    color: inherit;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.shopee-flash-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lg);
+    border-color: #fdba74;
+}
+.flash-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: #ea580c;
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 900;
+    padding: 2px 7px;
+    border-radius: 4px;
+    z-index: 2;
+}
+.flash-img-wrap {
+    height: 150px;
+    background: #0b0f19;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    margin-bottom: 12px;
+}
+.flash-img-wrap img {
+    max-height: 100%;
+    max-width: 100%;
+    object-fit: contain;
+    transition: transform 0.2s ease;
+}
+.shopee-flash-card:hover .flash-img-wrap img {
+    transform: scale(1.06);
+}
+.flash-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--dark);
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    margin-bottom: 8px;
+}
+body.dark-theme .flash-name {
+    color: #f8fafc;
+}
+.flash-price-wrap {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+.flash-price {
+    font-size: 16px;
+    font-weight: 900;
+    color: #ea580c;
+}
+.flash-orig-price {
+    font-size: 11px;
+    color: var(--gray-light);
+    text-decoration: line-through;
+}
+.flash-stock-track {
+    background: #fed7aa;
+    height: 16px;
+    border-radius: 10px;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.flash-stock-fill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    background: linear-gradient(90deg, #ea580c, #f97316);
+    border-radius: 10px;
+    z-index: 1;
+}
+.flash-stock-text {
+    position: relative;
+    z-index: 2;
+    font-size: 10px;
+    font-weight: 800;
+    color: #ffffff;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+/* 6. Shopee Claimable Discount Vouchers Carousel */
+.shopee-voucher-section {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    margin-bottom: 28px;
+    box-shadow: var(--shadow-sm);
+}
+.shopee-voucher-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+.voucher-section-title {
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--dark);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+body.dark-theme .voucher-section-title {
+    color: #f8fafc;
+}
+.shopee-voucher-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+}
+@media (max-width: 900px) {
+    .shopee-voucher-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+.voucher-ticket {
+    background: #fff7ed;
+    border: 1px dashed #f97316;
+    border-radius: 8px;
+    padding: 12px 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.voucher-ticket:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-sm);
+}
+body.dark-theme .voucher-ticket {
+    background: #1c1917;
+    border-color: #ea580c;
+}
+.voucher-amount {
+    font-size: 17px;
+    font-weight: 900;
+    color: #ea580c;
+    line-height: 1.1;
+}
+.voucher-min-spend {
+    font-size: 11px;
+    color: var(--gray);
+    margin-top: 3px;
+}
+.voucher-code-badge {
+    display: inline-block;
+    background: #fef08a;
+    color: #854d0e;
+    font-size: 10px;
+    font-weight: 800;
+    padding: 1px 6px;
+    border-radius: 3px;
+    margin-top: 4px;
+    font-family: monospace;
+}
+.btn-claim-voucher {
+    background: #ea580c;
+    color: #ffffff;
+    border: none;
+    font-size: 12px;
+    font-weight: 800;
+    padding: 7px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.btn-claim-voucher:hover {
+    background: #c2410c;
+    transform: scale(1.03);
+}
+.btn-claim-voucher.claimed {
+    background: #16a34a;
+    cursor: default;
+}
+
+/* 7. Enhanced Shopee Product Card Tags */
+.product-card {
+    position: relative;
+    overflow: hidden;
+}
+.shopee-card-badge-mall {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: #dc2626;
+    color: #ffffff;
+    font-size: 10px;
+    font-weight: 900;
+    padding: 2px 6px;
+    border-radius: 3px;
+    z-index: 2;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+.shopee-card-discount-tag {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: #ea580c;
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 900;
+    padding: 2px 6px;
+    border-radius: 3px;
+    z-index: 2;
+}
+.shopee-card-rating {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    margin-bottom: 6px;
+}
+.shopee-card-stars {
+    color: #f59e0b;
+    font-size: 12px;
+}
+.shopee-card-sold {
+    font-size: 11px;
+    color: var(--gray);
+    margin-left: auto;
+}
+.shopee-card-price-row {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+.shopee-card-orig-price {
+    font-size: 12px;
+    color: var(--gray-light);
+    text-decoration: line-through;
+}
+.shopee-card-free-ship {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 10px;
+    font-weight: 800;
+    color: #059669;
+    background: #d1fae5;
+    padding: 1px 6px;
+    border-radius: 3px;
+    margin-bottom: 10px;
+}
+body.dark-theme .shopee-card-free-ship {
+    background: #064e3b;
+    color: #6ee7b7;
+}
+
+/* 8. Floating Shopee Support Chat Pill */
+.floating-chat-pill {
+    position: fixed;
+    bottom: 24px;
+    right: 80px;
+    background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%);
+    color: #ffffff;
+    padding: 11px 20px;
+    border-radius: 30px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 800;
+    box-shadow: 0 4px 15px rgba(234, 88, 12, 0.4);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    z-index: 980;
+}
+.floating-chat-pill:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(234, 88, 12, 0.5);
+    color: #ffffff;
+}
+.chat-pill-icon {
+    font-size: 18px;
+}
+.chat-pill-badge {
+    background: #ffffff;
+    color: #ea580c;
+    font-size: 11px;
+    font-weight: 900;
+    padding: 1px 6px;
+    border-radius: 10px;
+    margin-left: 2px;
+}
+
+/* 9. Shopee Sort Toolbar */
+.shopee-sort-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 18px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+.shopee-sort-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--gray);
+    margin-right: 6px;
+}
+.shopee-sort-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--dark);
+    text-decoration: none;
+    transition: all 0.15s ease;
+}
+.shopee-sort-btn:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+.shopee-sort-btn.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #ffffff;
+    font-weight: 700;
+}
+body.dark-theme .shopee-sort-btn {
+    color: #e2e8f0;
+    border-color: #334155;
+}
+body.dark-theme .shopee-sort-btn.active {
+    background: #3b82f6;
+    border-color: #3b82f6;
+    color: #ffffff;
+}
+
+
 
 
 

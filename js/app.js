@@ -185,4 +185,111 @@ $(document).ready(function() {
         e.preventDefault();
         $('html, body').stop().animate({ scrollTop: 0 }, 350);
     });
+
+    // 15. Shopee Hero Promotional Carousel
+    var $heroCarousel = $('#shopee-hero-carousel');
+    if ($heroCarousel.length) {
+        var $slides = $heroCarousel.find('.shopee-slide');
+        var $dots   = $heroCarousel.find('.shopee-dot');
+        var slideCount = $slides.length;
+        var currentSlide = 0;
+        var heroTimer = null;
+
+        function showHeroSlide(index) {
+            if (index < 0) index = slideCount - 1;
+            if (index >= slideCount) index = 0;
+            currentSlide = index;
+
+            $slides.removeClass('active').eq(currentSlide).addClass('active');
+            $dots.removeClass('active').eq(currentSlide).addClass('active');
+        }
+
+        function startHeroTimer() {
+            stopHeroTimer();
+            heroTimer = setInterval(function() {
+                showHeroSlide(currentSlide + 1);
+            }, 5000);
+        }
+
+        function stopHeroTimer() {
+            if (heroTimer) {
+                clearInterval(heroTimer);
+                heroTimer = null;
+            }
+        }
+
+        $heroCarousel.find('.shopee-carousel-next').on('click', function(e) {
+            e.preventDefault();
+            showHeroSlide(currentSlide + 1);
+            startHeroTimer();
+        });
+
+        $heroCarousel.find('.shopee-carousel-prev').on('click', function(e) {
+            e.preventDefault();
+            showHeroSlide(currentSlide - 1);
+            startHeroTimer();
+        });
+
+        $dots.on('click', function() {
+            var idx = parseInt($(this).data('index'), 10);
+            showHeroSlide(idx);
+            startHeroTimer();
+        });
+
+        $heroCarousel.on('mouseenter', stopHeroTimer).on('mouseleave', startHeroTimer);
+        startHeroTimer();
+    }
+
+    // 16. Shopee Flash Deals Dynamic Countdown Timer
+    var $timerBoxes = $('.flash-countdown');
+    if ($timerBoxes.length) {
+        function updateFlashTimer() {
+            var now = new Date();
+            // Count down to next 3-hour window
+            var targetHour = Math.ceil((now.getHours() + 1) / 3) * 3;
+            var target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), targetHour, 0, 0);
+            var diff = Math.max(0, Math.floor((target - now) / 1000));
+
+            var hours = Math.floor(diff / 3600);
+            var minutes = Math.floor((diff % 3600) / 60);
+            var seconds = diff % 60;
+
+            $('#cd-hours').text(hours < 10 ? '0' + hours : hours);
+            $('#cd-minutes').text(minutes < 10 ? '0' + minutes : minutes);
+            $('#cd-seconds').text(seconds < 10 ? '0' + seconds : seconds);
+        }
+        updateFlashTimer();
+        setInterval(updateFlashTimer, 1000);
+    }
+
+    // 17. Shopee One-Click Voucher Claiming
+    $(document).on('click', '.btn-claim-voucher', function(e) {
+        e.preventDefault();
+        var $btn = $(this);
+        var code = $btn.data('code');
+
+        if ($btn.hasClass('claimed')) return;
+
+        // Copy code to clipboard
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(code);
+        }
+
+        // Store in localStorage for checkout auto-fill
+        localStorage.setItem('sumthin_claimed_voucher', code);
+
+        $btn.addClass('claimed').text('Claimed ✓');
+
+        // Trigger toast notification if ajax toast helper is available
+        var toastMsg = 'Voucher "' + code + '" claimed! Code copied to clipboard.';
+        var $toastBox = $('.ajax-toast-container');
+        if (!$toastBox.length) {
+            $toastBox = $('<div class="ajax-toast-container"></div>').appendTo('body');
+        }
+        var $t = $('<div class="ajax-toast ajax-toast-success"><span>✓</span><span>' + toastMsg + '</span></div>').appendTo($toastBox);
+        setTimeout(function() {
+            $t.css({ opacity: 0, transform: 'translateY(15px)' });
+            setTimeout(function() { $t.remove(); }, 300);
+        }, 3000);
+    });
 });

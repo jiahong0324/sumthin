@@ -59,6 +59,28 @@
     <!-- Floating Back to Top Button -->
     <button type="button" id="btn-back-to-top" class="btn-back-to-top" title="Scroll to Top" aria-label="Scroll to top">&#8593;</button>
 
+    <?php if (!str_contains($_SERVER['REQUEST_URI'], '/admin/')): ?>
+        <!-- Shopee-Style Floating Customer Support Chat Launcher -->
+        <a href="<?= base_url(is_logged_in() ? 'chat.php' : 'login.php?redirect=chat.php') ?>" 
+           class="floating-chat-pill" 
+           title="Chat with Customer Service Support" 
+           aria-label="Chat with Customer Service Support">
+            <span class="chat-pill-icon">💬</span>
+            <span class="chat-pill-text">Chat with Us</span>
+            <?php
+            $foot_unread = 0;
+            if (is_member()) {
+                try {
+                    $u_stmt = $db->prepare("SELECT COUNT(*) FROM `chat_message` WHERE `member_id` = ? AND `sender_role` = 'Admin' AND `is_read` = 0");
+                    $u_stmt->execute([$_SESSION['user']->id]);
+                    $foot_unread = (int)$u_stmt->fetchColumn();
+                } catch (Exception $e) {}
+            }
+            ?>
+            <span class="chat-pill-badge" id="float-chat-badge" style="<?= $foot_unread > 0 ? '' : 'display:none;' ?>"><?= $foot_unread ?></span>
+        </a>
+    <?php endif; ?>
+
     <!-- Local jQuery Library (Downloaded locally as required, NO CDN) -->
     <script src="<?= base_url('js/lib/jquery-3.7.1.min.js') ?>"></script>
     <?php if (file_exists(__DIR__ . '/js/lib/chart.umd.min.js')): ?>
