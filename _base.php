@@ -212,7 +212,11 @@ function verify_csrf(): void {
         $token = $_POST['csrf_token'] ?? '';
         if (empty($token) || !hash_equals($_SESSION['csrf_token'] ?? '', $token)) {
             http_response_code(403);
-            die('<h1 style="font-family:sans-serif;color:#dc2626;text-align:center;margin-top:100px;">403 Forbidden - Invalid or Expired CSRF Token</h1>');
+            global $config;
+            $css_link = (!empty($config['app']['base_url']) ? rtrim($config['app']['base_url'], '/') : '') . '/css/app.css';
+            die('<!DOCTYPE html><html><head><meta charset="utf-8"><title>403 Forbidden</title><link rel="stylesheet" href="' . htmlspecialchars($css_link) . '"></head><body>'
+                . '<h1 class="csrf-error-title">403 Forbidden - Invalid or Expired CSRF Token</h1>'
+                . '</body></html>');
         }
     }
 }
@@ -242,7 +246,7 @@ function captcha_widget(): string {
         $script_loaded = true;
     }
 
-    return $script . '<div class="cf-turnstile" data-sitekey="' . encode($site_key) . '" style="margin: 14px 0;"></div>';
+    return $script . '<div class="cf-turnstile my-14" data-sitekey="' . encode($site_key) . '"></div>';
 }
 
 /**
