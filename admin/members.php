@@ -169,11 +169,20 @@ require_once __DIR__ . '/../_head.php';
                                 <div style="font-size:11px; color:var(--gray);"><?= (int)$m->total_orders ?> order(s)</div>
                             </td>
                             <td>
-                                <?php if ($m->status === 'Active'): ?>
-                                    <span class="role-pill" style="background:#dcfce7; color:#15803d;">Active</span>
-                                <?php else: ?>
-                                    <span class="role-pill pill-admin">Blocked</span>
-                                <?php endif; ?>
+                                <div>
+                                    <?php if ($m->status === 'Active'): ?>
+                                        <span class="role-pill" style="background:#dcfce7; color:#15803d;">Active</span>
+                                    <?php else: ?>
+                                        <span class="role-pill pill-admin">Blocked</span>
+                                    <?php endif; ?>
+                                </div>
+                                <div style="margin-top: 4px;">
+                                    <?php if (!empty($m->email_verified_at)): ?>
+                                        <span class="role-pill" style="background:#e0f2fe; color:#0369a1; font-size:10px; padding:1px 6px;" title="Verified at <?= encode($m->email_verified_at) ?>">✓ Verified</span>
+                                    <?php else: ?>
+                                        <span class="role-pill" style="background:#fef3c7; color:#b45309; font-size:10px; padding:1px 6px;">⚠ Unverified</span>
+                                    <?php endif; ?>
+                                </div>
                             </td>
                             <td><?= encode(date('d M Y', strtotime($m->created_at))) ?></td>
                             <td style="text-align:right;">

@@ -79,14 +79,14 @@ $title = 'Review ' . $product->name;
 require_once __DIR__ . '/_head.php';
 ?>
 
-<div class="container" style="max-width: 600px;">
-    <div style="margin-bottom: 24px;">
+<div class="container container-review">
+    <div class="mb-24">
         <a href="<?= base_url('product.php?id=' . $product_id) ?>" class="form-link">&larr; Back to Product</a>
-        <h1 style="font-size:24px; font-weight:800; color:var(--dark); margin-top:8px;">Write a Customer Review</h1>
-        <p style="font-size:14px; color:var(--gray);">Verified purchase from Order #<?= (int)$reviewable_order_id ?> for <strong><?= encode($product->name) ?></strong>.</p>
+        <h1 class="page-title mt-8">Write a Customer Review</h1>
+        <p class="page-subtitle">Verified purchase from Order #<?= (int)$reviewable_order_id ?> for <strong><?= encode($product->name) ?></strong>.</p>
     </div>
 
-    <div style="background:#fff; border:1px solid var(--border); border-radius:var(--radius); padding:32px; box-shadow:var(--shadow-sm);">
+    <div class="card-panel-body">
         <form action="<?= base_url('review_add.php?product_id=' . $product_id) ?>" method="POST" novalidate>
             <?= csrf_field() ?>
 
@@ -113,7 +113,7 @@ require_once __DIR__ . '/_head.php';
                 <?= err('comment') ?>
             </div>
 
-            <div style="display:flex; gap:12px; margin-top:20px; border-top:1px solid var(--border); padding-top:20px;">
+            <div class="form-actions d-flex gap-12">
                 <button type="submit" class="btn btn-primary">Post Review</button>
                 <a href="<?= base_url('product.php?id=' . $product_id) ?>" class="btn btn-secondary">Cancel</a>
             </div>

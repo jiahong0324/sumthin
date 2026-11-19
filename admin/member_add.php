@@ -71,13 +71,13 @@ if (is_post()) {
         $photo_filename = $uploaded_photo;
     }
 
-    // 3. Database Insertion
+    // 3. Database Insertion (Admin-created accounts are verified automatically)
     if (empty($errors)) {
         $password_hash = password_hash($password, PASSWORD_DEFAULT);
 
         $stmt = $db->prepare('
-            INSERT INTO `user` (`name`, `email`, `phone`, `password_hash`, `role`, `photo`, `status`) 
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO `user` (`name`, `email`, `phone`, `password_hash`, `role`, `photo`, `status`, `email_verified_at`) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
         ');
         $stmt->execute([$name, $email, $phone ?: null, $password_hash, $role, $photo_filename, 'Active']);
 

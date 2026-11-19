@@ -117,6 +117,7 @@ CREATE TABLE `order` (
   `final_amount` DECIMAL(10,2) NOT NULL,
   `status` ENUM('Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled') NOT NULL DEFAULT 'Pending',
   `payment_status` ENUM('Unpaid', 'Paid', 'Refunded') NOT NULL DEFAULT 'Unpaid',
+  `payment_method` ENUM('stripe', 'pay_later') NOT NULL DEFAULT 'pay_later',
   `tracking_no` VARCHAR(100) DEFAULT NULL,
   `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -149,7 +150,7 @@ CREATE TABLE `payment` (
   `stripe_session_id` VARCHAR(255) DEFAULT NULL UNIQUE,
   `amount` DECIMAL(10,2) NOT NULL,
   `currency` CHAR(3) NOT NULL DEFAULT 'myr',
-  `status` ENUM('Pending', 'Paid', 'Failed') NOT NULL DEFAULT 'Pending',
+  `status` ENUM('Pending', 'Paid', 'Failed', 'Refunded') NOT NULL DEFAULT 'Pending',
   `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `paid_at` DATETIME DEFAULT NULL,
   CONSTRAINT `fk_payment_order` FOREIGN KEY (`order_id`) REFERENCES `order` (`id`) ON DELETE RESTRICT
@@ -322,8 +323,9 @@ INSERT INTO `brand` (`id`, `name`) VALUES
 (3, 'sumthin Studio'),
 (4, 'sumthin Ultra');
 
--- 3. Insert Users (2 Admins: Admin123! | 16 Members: Member123!)
+-- 3. Insert Users (2 Admins: Admin123! | 17 Members: Member123!)
 -- Member ID 17 is Blocked, Member ID 18 is Locked (failed_attempts=3, locked_until future)
+-- Member ID 19 is Unverified (email_verified_at = NULL for verification demo)
 INSERT INTO `user` (`id`, `email`, `password_hash`, `name`, `phone`, `role`, `photo`, `status`, `failed_attempts`, `locked_until`, `remember_token`, `email_verified_at`, `created_at`) VALUES
 (1, 'admin@sumthin.com', '$2y$10$q3t4RuriSZuA7QAL0lCje.anBH9mtYSYww20kv8wAP0SFlHp9H6Pm', 'System Administrator', '012-3456789', 'Admin', 'default_user.png', 'Active', 0, NULL, NULL, '2026-01-01 08:00:00', '2026-01-01 08:00:00'),
 (2, 'staff@sumthin.com', '$2y$10$q3t4RuriSZuA7QAL0lCje.anBH9mtYSYww20kv8wAP0SFlHp9H6Pm', 'Staff Moderator', '012-9876543', 'Admin', 'default_user.png', 'Active', 0, NULL, NULL, '2026-01-01 08:30:00', '2026-01-01 08:30:00'),
@@ -342,7 +344,8 @@ INSERT INTO `user` (`id`, `email`, `password_hash`, `name`, `phone`, `role`, `ph
 (15, 'marcus@gmail.com', '$2y$10$6x5cWt/kx4hGyn69a0p5/uJjRUbuSveEbCkKtMvFasum9WrE4ey9.', 'Marcus Heng', '012-3456987', 'Member', 'default_user.png', 'Active', 0, NULL, NULL, '2026-02-10 16:15:00', '2026-02-10 16:15:00'),
 (16, 'nicole@gmail.com', '$2y$10$6x5cWt/kx4hGyn69a0p5/uJjRUbuSveEbCkKtMvFasum9WrE4ey9.', 'Nicole Fong', '013-4567890', 'Member', 'default_user.png', 'Active', 0, NULL, NULL, '2026-02-15 11:05:00', '2026-02-15 11:05:00'),
 (17, 'oliver@gmail.com', '$2y$10$6x5cWt/kx4hGyn69a0p5/uJjRUbuSveEbCkKtMvFasum9WrE4ey9.', 'Oliver See', '014-5678901', 'Member', 'default_user.png', 'Blocked', 0, NULL, NULL, '2026-02-20 13:25:00', '2026-02-20 13:25:00'),
-(18, 'patricia@gmail.com', '$2y$10$6x5cWt/kx4hGyn69a0p5/uJjRUbuSveEbCkKtMvFasum9WrE4ey9.', 'Patricia Sim', '011-6789012', 'Member', 'default_user.png', 'Active', 3, '2027-12-31 23:59:59', NULL, '2026-02-25 15:40:00', '2026-02-25 15:40:00');
+(18, 'patricia@gmail.com', '$2y$10$6x5cWt/kx4hGyn69a0p5/uJjRUbuSveEbCkKtMvFasum9WrE4ey9.', 'Patricia Sim', '011-6789012', 'Member', 'default_user.png', 'Active', 3, '2027-12-31 23:59:59', NULL, '2026-02-25 15:40:00', '2026-02-25 15:40:00'),
+(19, 'quinn@gmail.com', '$2y$10$6x5cWt/kx4hGyn69a0p5/uJjRUbuSveEbCkKtMvFasum9WrE4ey9.', 'Quinn Tan', '016-7890123', 'Member', 'default_user.png', 'Active', 0, NULL, NULL, NULL, '2026-03-01 10:00:00');
 
 -- 4. Insert 30 sumthin-Branded Products
 -- Products 3, 9, 18 have low stock (< 5); Product 12 has stock = 0
@@ -605,32 +608,32 @@ INSERT INTO `voucher` (`id`, `code`, `discount_type`, `discount_value`, `min_spe
 (6, 'TITAN80', 'fixed', 80.00, 800.00, '80.00', 50, 4, 1, '2027-12-31 23:59:59');
 
 -- 8. Insert 25 Sample Orders (Delivered, Shipped, Processing, Pending, Cancelled across 60 days)
-INSERT INTO `order` (`id`, `order_no`, `user_id`, `address_id`, `total_amount`, `discount_amount`, `final_amount`, `status`, `payment_status`, `tracking_no`, `created_at`) VALUES
-(1, 'ORD-20260918-001', 3, '1', 1127.00, 50.00, 1077.00, 'Delivered', 'Paid', 'DHL-MY-10293841', '2026-09-18 10:20:00'),
-(2, 'ORD-20260922-002', 4, '2', 1417.00, 30.00, 1387.00, 'Delivered', 'Paid', 'JNT-MY-88291023', '2026-09-22 14:15:00'),
-(3, 'ORD-20260927-003', 5, '3', 1816.00, 0.00, 1816.00, 'Delivered', 'Paid', 'POS-MY-77223344', '2026-09-27 16:30:00'),
-(4, 'ORD-20261002-004', 6, '4', 1417.00, 50.00, 1367.00, 'Delivered', 'Paid', 'DHL-MY-44556677', '2026-10-02 09:45:00'),
-(5, 'ORD-20261008-005', 7, '5', 1547.00, 0.00, 1547.00, 'Delivered', 'Paid', 'JNT-MY-33994411', '2026-10-08 11:10:00'),
-(6, 'ORD-20261014-006', 8, '6', 688.00, 30.00, 658.00, 'Delivered', 'Paid', 'DHL-MY-99881122', '2026-10-14 15:20:00'),
-(7, 'ORD-20261019-007', 9, '7', 968.00, 0.00, 968.00, 'Delivered', 'Paid', 'POS-MY-55443322', '2026-10-19 13:05:00'),
-(8, 'ORD-20261024-008', 10, '8', 568.00, 30.00, 538.00, 'Delivered', 'Paid', 'JNT-MY-11224455', '2026-10-24 17:40:00'),
-(9, 'ORD-20261028-009', 11, '9', 528.00, 0.00, 528.00, 'Delivered', 'Paid', 'DHL-MY-88776655', '2026-10-28 10:15:00'),
-(10, 'ORD-20261101-010', 12, '10', 608.00, 50.00, 558.00, 'Delivered', 'Paid', 'POS-MY-99001122', '2026-11-01 12:00:00'),
-(11, 'ORD-20261104-011', 13, '11', 688.00, 30.00, 658.00, 'Shipped', 'Paid', 'JNT-MY-66778899', '2026-11-04 14:30:00'),
-(12, 'ORD-20261106-012', 14, '12', 899.00, 50.00, 849.00, 'Shipped', 'Paid', 'DHL-MY-22334455', '2026-11-06 16:20:00'),
-(13, 'ORD-20261108-013', 15, '13', 668.00, 0.00, 668.00, 'Shipped', 'Paid', 'POS-MY-33445566', '2026-11-08 09:10:00'),
-(14, 'ORD-20261109-014', 16, '14', 1399.00, 50.00, 1349.00, 'Shipped', 'Paid', 'JNT-MY-44556677', '2026-11-09 11:45:00'),
-(15, 'ORD-20261110-015', 3, '17', 448.00, 0.00, 448.00, 'Shipped', 'Paid', 'DHL-MY-55667788', '2026-11-10 15:00:00'),
-(16, 'ORD-20261111-016', 4, '18', 568.00, 30.00, 538.00, 'Processing', 'Paid', NULL, '2026-11-11 13:15:00'),
-(17, 'ORD-20261112-017', 5, '19', 469.00, 0.00, 469.00, 'Processing', 'Paid', NULL, '2026-11-12 10:30:00'),
-(18, 'ORD-20261112-018', 6, '20', 1099.00, 50.00, 1049.00, 'Processing', 'Paid', NULL, '2026-11-12 16:45:00'),
-(19, 'ORD-20261113-019', 7, '21', 968.00, 0.00, 968.00, 'Processing', 'Paid', NULL, '2026-11-13 09:20:00'),
-(20, 'ORD-20261113-020', 8, '6', 448.00, 0.00, 448.00, 'Pending', 'Unpaid', NULL, '2026-11-13 14:10:00'),
-(21, 'ORD-20261114-021', 9, '7', 59.00, 0.00, 74.00, 'Pending', 'Unpaid', NULL, '2026-11-14 08:30:00'),
-(22, 'ORD-20261114-022', 10, '8', 299.00, 0.00, 299.00, 'Pending', 'Unpaid', NULL, '2026-11-14 11:00:00'),
-(23, 'ORD-20261110-023', 11, '9', 349.00, 0.00, 349.00, 'Cancelled', 'Refunded', NULL, '2026-11-10 10:00:00'),
-(24, 'ORD-20261112-024', 12, '10', 289.00, 0.00, 289.00, 'Cancelled', 'Refunded', NULL, '2026-11-12 11:30:00'),
-(25, 'ORD-20261114-025', 13, '11', 89.00, 0.00, 104.00, 'Cancelled', 'Refunded', NULL, '2026-11-14 15:45:00');
+INSERT INTO `order` (`id`, `order_no`, `user_id`, `address_id`, `total_amount`, `discount_amount`, `final_amount`, `status`, `payment_status`, `payment_method`, `tracking_no`, `created_at`) VALUES
+(1, 'ORD-20260918-001', 3, '1', 1127.00, 50.00, 1077.00, 'Delivered', 'Paid', 'stripe', 'DHL-MY-10293841', '2026-09-18 10:20:00'),
+(2, 'ORD-20260922-002', 4, '2', 1417.00, 30.00, 1387.00, 'Delivered', 'Paid', 'stripe', 'JNT-MY-88291023', '2026-09-22 14:15:00'),
+(3, 'ORD-20260927-003', 5, '3', 1816.00, 0.00, 1816.00, 'Delivered', 'Paid', 'stripe', 'POS-MY-77223344', '2026-09-27 16:30:00'),
+(4, 'ORD-20261002-004', 6, '4', 1417.00, 50.00, 1367.00, 'Delivered', 'Paid', 'stripe', 'DHL-MY-44556677', '2026-10-02 09:45:00'),
+(5, 'ORD-20261008-005', 7, '5', 1547.00, 0.00, 1547.00, 'Delivered', 'Paid', 'stripe', 'JNT-MY-33994411', '2026-10-08 11:10:00'),
+(6, 'ORD-20261014-006', 8, '6', 688.00, 30.00, 658.00, 'Delivered', 'Paid', 'stripe', 'DHL-MY-99881122', '2026-10-14 15:20:00'),
+(7, 'ORD-20261019-007', 9, '7', 968.00, 0.00, 968.00, 'Delivered', 'Paid', 'stripe', 'POS-MY-55443322', '2026-10-19 13:05:00'),
+(8, 'ORD-20261024-008', 10, '8', 568.00, 30.00, 538.00, 'Delivered', 'Paid', 'stripe', 'JNT-MY-11224455', '2026-10-24 17:40:00'),
+(9, 'ORD-20261028-009', 11, '9', 528.00, 0.00, 528.00, 'Delivered', 'Paid', 'stripe', 'DHL-MY-88776655', '2026-10-28 10:15:00'),
+(10, 'ORD-20261101-010', 12, '10', 608.00, 50.00, 558.00, 'Delivered', 'Paid', 'stripe', 'POS-MY-99001122', '2026-11-01 12:00:00'),
+(11, 'ORD-20261104-011', 13, '11', 688.00, 30.00, 658.00, 'Shipped', 'Paid', 'stripe', 'JNT-MY-66778899', '2026-11-04 14:30:00'),
+(12, 'ORD-20261106-012', 14, '12', 899.00, 50.00, 849.00, 'Shipped', 'Paid', 'stripe', 'DHL-MY-22334455', '2026-11-06 16:20:00'),
+(13, 'ORD-20261108-013', 15, '13', 668.00, 0.00, 668.00, 'Shipped', 'Paid', 'stripe', 'POS-MY-33445566', '2026-11-08 09:10:00'),
+(14, 'ORD-20261109-014', 16, '14', 1399.00, 50.00, 1349.00, 'Shipped', 'Paid', 'stripe', 'JNT-MY-44556677', '2026-11-09 11:45:00'),
+(15, 'ORD-20261110-015', 3, '17', 448.00, 0.00, 448.00, 'Shipped', 'Paid', 'stripe', 'DHL-MY-55667788', '2026-11-10 15:00:00'),
+(16, 'ORD-20261111-016', 4, '18', 568.00, 30.00, 538.00, 'Processing', 'Paid', 'stripe', NULL, '2026-11-11 13:15:00'),
+(17, 'ORD-20261112-017', 5, '19', 469.00, 0.00, 469.00, 'Processing', 'Paid', 'stripe', NULL, '2026-11-12 10:30:00'),
+(18, 'ORD-20261112-018', 6, '20', 1099.00, 50.00, 1049.00, 'Processing', 'Paid', 'stripe', NULL, '2026-11-12 16:45:00'),
+(19, 'ORD-20261113-019', 7, '21', 968.00, 0.00, 968.00, 'Processing', 'Paid', 'stripe', NULL, '2026-11-13 09:20:00'),
+(20, 'ORD-20261113-020', 8, '6', 448.00, 0.00, 448.00, 'Pending', 'Unpaid', 'pay_later', NULL, '2026-11-13 14:10:00'),
+(21, 'ORD-20261114-021', 9, '7', 59.00, 0.00, 74.00, 'Pending', 'Unpaid', 'pay_later', NULL, '2026-11-14 08:30:00'),
+(22, 'ORD-20261114-022', 10, '8', 299.00, 0.00, 299.00, 'Pending', 'Unpaid', 'pay_later', NULL, '2026-11-14 11:00:00'),
+(23, 'ORD-20261110-023', 11, '9', 349.00, 0.00, 349.00, 'Cancelled', 'Refunded', 'stripe', NULL, '2026-11-10 10:00:00'),
+(24, 'ORD-20261112-024', 12, '10', 289.00, 0.00, 289.00, 'Cancelled', 'Refunded', 'stripe', NULL, '2026-11-12 11:30:00'),
+(25, 'ORD-20261114-025', 13, '11', 89.00, 0.00, 104.00, 'Cancelled', 'Refunded', 'stripe', NULL, '2026-11-14 15:45:00');
 
 -- 9. Insert Order Items (1-4 items per order, exact mathematical matching)
 INSERT INTO `order_item` (`id`, `order_id`, `product_id`, `price`, `quantity`, `subtotal`) VALUES
@@ -701,7 +704,10 @@ INSERT INTO `payment` (`id`, `order_id`, `stripe_session_id`, `amount`, `currenc
 (16, 16, 'cs_test_seed_016', 538.00, 'myr', 'Paid', '2026-11-11 13:15:00', '2026-11-11 13:15:00'),
 (17, 17, 'cs_test_seed_017', 469.00, 'myr', 'Paid', '2026-11-12 10:30:00', '2026-11-12 10:30:00'),
 (18, 18, 'cs_test_seed_018', 1049.00, 'myr', 'Paid', '2026-11-12 16:45:00', '2026-11-12 16:45:00'),
-(19, 19, 'cs_test_seed_019', 968.00, 'myr', 'Paid', '2026-11-13 09:20:00', '2026-11-13 09:20:00');
+(19, 19, 'cs_test_seed_019', 968.00, 'myr', 'Paid', '2026-11-13 09:20:00', '2026-11-13 09:20:00'),
+(20, 23, 'cs_test_seed_023', 349.00, 'myr', 'Refunded', '2026-11-10 10:00:00', '2026-11-10 10:05:00'),
+(21, 24, 'cs_test_seed_024', 289.00, 'myr', 'Refunded', '2026-11-12 11:30:00', '2026-11-12 11:35:00'),
+(22, 25, 'cs_test_seed_025', 104.00, 'myr', 'Refunded', '2026-11-14 15:45:00', '2026-11-14 15:50:00');
 
 -- 11. Insert 25 Customer Reviews (ONLY from members with Delivered orders containing the product)
 INSERT INTO `review` (`id`, `product_id`, `user_id`, `order_id`, `rating`, `comment`, `created_at`) VALUES
@@ -756,12 +762,7 @@ INSERT INTO `wishlist` (`id`, `user_id`, `product_id`) VALUES
 
 -- 13. Insert 10 Email Audit Logs
 INSERT INTO `email_log` (`id`, `sent_by`, `type`, `recipient`, `subject`, `body`, `status`, `sent_at`) VALUES
-(1, NULL, 'auth', 'alice@gmail.com', 'Welcome to sumthin - Verify Your Account', 'Hi Alice,
-
-Welcome to sumthin! Please verify your email address to activate all member privileges.
-
-Best regards,
-sumthin Team', 'Sent', '2026-09-18 09:00:00'),
+(1, NULL, 'auth', 'alice@gmail.com', 'Welcome to sumthin - Verify Your Account', '[redacted - contains secure link]', 'Sent', '2026-09-18 09:00:00'),
 (2, '1', 'order', 'alice@gmail.com', 'Order Confirmed - ORD-20260918-001', 'Hi Alice,
 
 Thank you for your order ORD-20260918-001. We have received your payment of RM 1,077.00.
@@ -774,11 +775,7 @@ Your order ORD-20260922-002 has shipped via J&T Express tracking number JNT-MY-8
 
 Best regards,
 sumthin Fulfillment', 'Sent', '2026-09-23 09:15:00'),
-(4, NULL, 'auth', 'charlie@gmail.com', 'Password Reset Request', 'Hi Charlie,
-
-A request was submitted to reset your account password. If this was you, please follow the link within 1 hour.
-
-Security Team', 'Sent', '2026-10-01 14:10:00'),
+(4, NULL, 'auth', 'charlie@gmail.com', 'Password Reset Request', '[redacted - contains secure link]', 'Sent', '2026-10-01 14:10:00'),
 (5, '1', 'marketing', 'david@gmail.com', 'Exclusive Gadget Deal for You, David Lim!', 'Hi David Lim,
 
 We noticed you have an eye for great tech gadgets! Enjoy 10% off with promo code SUMTHIN10 on your next purchase.

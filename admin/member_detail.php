@@ -55,7 +55,10 @@ require_once __DIR__ . '/../_head.php';
             <h1 style="font-size:26px; font-weight:800; color:var(--dark); margin-top:6px;"><?= encode($m->name) ?></h1>
             <span style="font-size:13px; color:var(--gray);"><?= encode($m->email) ?></span>
         </div>
-        <div>
+        <div style="display:flex; gap:8px; align-items:center;">
+            <a href="<?= base_url('admin/email_send.php?member_id=' . (int)$m->id) ?>" class="btn btn-primary-sm">
+                ✉ Send Email
+            </a>
             <form action="<?= base_url('admin/member_toggle_status.php') ?>" method="POST" style="display:inline;">
                 <?= csrf_field() ?>
                 <input type="hidden" name="id" value="<?= (int)$m->id ?>">
@@ -83,6 +86,13 @@ require_once __DIR__ . '/../_head.php';
             <span class="role-pill <?= $m->status === 'Active' ? 'pill-member' : 'pill-admin' ?>" style="font-size:12px;">
                 Status: <?= encode($m->status) ?>
             </span>
+            <div style="margin-top: 8px;">
+                <?php if (!empty($m->email_verified_at)): ?>
+                    <span class="role-pill" style="background:#e0f2fe; color:#0369a1; font-size:11px;">✓ Verified</span>
+                <?php else: ?>
+                    <span class="role-pill" style="background:#fef3c7; color:#b45309; font-size:11px;">⚠ Unverified</span>
+                <?php endif; ?>
+            </div>
         </div>
 
         <div>
@@ -93,6 +103,18 @@ require_once __DIR__ . '/../_head.php';
                 <tr>
                     <td style="font-weight:700; width:160px; color:var(--dark-muted);">Customer ID</td>
                     <td>#<?= (int)$m->id ?></td>
+                </tr>
+                <tr>
+                    <td style="font-weight:700; color:var(--dark-muted);">Email Verification</td>
+                    <td>
+                        <?php if (!empty($m->email_verified_at)): ?>
+                            <span class="role-pill" style="background:#e0f2fe; color:#0369a1; font-size:11px;">Verified</span>
+                            <span style="font-size:12px; color:var(--gray); margin-left:6px;">(Verified on <?= encode(date('d F Y, h:i A', strtotime($m->email_verified_at))) ?>)</span>
+                        <?php else: ?>
+                            <span class="role-pill" style="background:#fef3c7; color:#b45309; font-size:11px;">Unverified</span>
+                            <span style="font-size:12px; color:var(--gray); margin-left:6px;">(Pending user verification)</span>
+                        <?php endif; ?>
+                    </td>
                 </tr>
                 <tr>
                     <td style="font-weight:700; color:var(--dark-muted);">Phone Number</td>

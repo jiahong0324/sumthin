@@ -63,14 +63,14 @@ $title = 'Change Password';
 require_once __DIR__ . '/_head.php';
 ?>
 
-<div class="container" style="max-width: 550px;">
-    <div style="margin-bottom: 24px;">
+<div class="container container-auth">
+    <div class="mb-24">
         <a href="<?= base_url('profile.php') ?>" class="form-link">&larr; Back to Profile</a>
-        <h1 style="font-size:24px; font-weight:800; color:var(--dark); margin-top:8px;">Change Password</h1>
-        <p style="font-size:14px; color:var(--gray);">Ensure your account uses a strong, unique password.</p>
+        <h1 class="page-title mt-8">Change Password</h1>
+        <p class="page-subtitle">Ensure your account uses a strong, unique password.</p>
     </div>
 
-    <div style="background:#fff; border:1px solid var(--border); border-radius:var(--radius); padding:32px; box-shadow:var(--shadow-sm);">
+    <div class="card-panel-body">
         <form action="<?= base_url('change_password.php') ?>" method="POST" novalidate>
             <?= csrf_field() ?>
 
@@ -95,7 +95,7 @@ require_once __DIR__ . '/_head.php';
                 <?= err('confirm_password') ?>
             </div>
 
-            <div style="margin-top:24px; border-top:1px solid var(--border); padding-top:20px; display:flex; gap:12px;">
+            <div class="form-actions d-flex gap-12">
                 <button type="submit" class="btn btn-primary">Update Password</button>
                 <a href="<?= base_url('profile.php') ?>" class="btn btn-secondary">Cancel</a>
             </div>

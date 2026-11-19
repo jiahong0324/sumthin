@@ -88,10 +88,11 @@ function send_mail(
 
     // Plain text version for fallback & logging
     $plain_text = trim(strip_tags(str_replace(['<br>', '<br/>', '<br />', '</p>', '</li>'], "\n", $html_body)));
+    $logged_body = ($type === 'auth') ? '[redacted - contains secure link]' : $plain_text;
 
     // 2. If mail dispatching is disabled, record simulated email to database and return false
     if (!$enabled) {
-        log_email($to, $subject, $plain_text, 'Sent', $type, $sent_by);
+        log_email($to, $subject, $logged_body, 'Sent', $type, $sent_by);
         return false;
     }
 
@@ -99,13 +100,15 @@ function send_mail(
     $mail = new PHPMailer(true);
     try {
         $mail->isSMTP();
-        $mail->Host       = $mail_cfg['smtp_host'] ?? 'smtp.gmail.com';
-        $mail->SMTPAuth   = (bool)($mail_cfg['smtp_auth'] ?? true);
-        $mail->Username   = $mail_cfg['username'] ?? '';
-        $mail->Password   = $mail_cfg['password'] ?? '';
-        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-        $mail->Port       = (int)($mail_cfg['smtp_port'] ?? 587);
-        $mail->CharSet    = 'UTF-8';
+        $mail->Host          = $mail_cfg['smtp_host'] ?? 'smtp.gmail.com';
+        $mail->SMTPAuth      = (bool)($mail_cfg['smtp_auth'] ?? true);
+        $mail->Username      = $mail_cfg['username'] ?? '';
+        $mail->Password      = $mail_cfg['password'] ?? '';
+        $mail->SMTPSecure    = PHPMailer::ENCRYPTION_STARTTLS;
+        $mail->Port          = (int)($mail_cfg['smtp_port'] ?? 587);
+        $mail->CharSet       = 'UTF-8';
+        $mail->Timeout       = 10;
+        $mail->SMTPKeepAlive = false;
 
         if ($debug) {
             $mail->SMTPDebug = 2;
@@ -122,15 +125,15 @@ function send_mail(
         $mail->AltBody = $plain_text;
 
         $mail->send();
-        log_email($to, $subject, $plain_text, 'Sent', $type, $sent_by);
+        log_email($to, $subject, $logged_body, 'Sent', $type, $sent_by);
         return true;
     } catch (PHPMailerException $e) {
         error_log("PHPMailer error sending to {$to}: " . $e->getMessage());
-        log_email($to, $subject, $plain_text, 'Failed', $type, $sent_by);
+        log_email($to, $subject, $logged_body, 'Failed', $type, $sent_by);
         return false;
     } catch (\Throwable $e) {
         error_log("General mail error sending to {$to}: " . $e->getMessage());
-        log_email($to, $subject, $plain_text, 'Failed', $type, $sent_by);
+        log_email($to, $subject, $logged_body, 'Failed', $type, $sent_by);
         return false;
     }
 }

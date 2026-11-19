@@ -57,6 +57,7 @@ $user         = current_user();
                     <a href="<?= base_url('admin/categories.php') ?>" class="nav-link <?= str_contains($_SERVER['REQUEST_URI'], '/admin/categor') ? 'active' : '' ?>">Categories</a>
                     <a href="<?= base_url('admin/members.php') ?>" class="nav-link <?= str_contains($_SERVER['REQUEST_URI'], '/admin/member') ? 'active' : '' ?>">Members</a>
                     <a href="<?= base_url('admin/orders.php') ?>" class="nav-link <?= str_contains($_SERVER['REQUEST_URI'], '/admin/order') ? 'active' : '' ?>">Orders</a>
+                    <a href="<?= base_url('admin/email_send.php') ?>" class="nav-link <?= str_contains($_SERVER['REQUEST_URI'], '/admin/email') ? 'active' : '' ?>">Email</a>
                     <a href="<?= base_url('admin/settings.php') ?>" class="nav-link <?= str_contains($_SERVER['REQUEST_URI'], '/admin/setting') ? 'active' : '' ?>">Settings</a>
                 <?php elseif (is_member()): ?>
                     <!-- Member specific navigation -->

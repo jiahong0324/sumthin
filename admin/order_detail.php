@@ -58,6 +58,8 @@ if (is_post() && req('action') === 'update_status') {
             $errors['status'] = "Order is in terminal state '{$o->status}' and cannot be modified.";
         } elseif (!in_array($new_status, $allowed_next_statuses, true)) {
             $errors['status'] = "Invalid status transition from '{$o->status}' to '{$new_status}'. Allowed: " . implode(', ', $allowed_next_statuses) . '.';
+        } elseif ($new_status === 'Shipped' && $new_payment_status !== 'Paid') {
+            $errors['status'] = 'Cannot move order to Shipped unless payment status is Paid.';
         }
     }
 
@@ -333,6 +335,10 @@ require_once __DIR__ . '/../_head.php';
                     Order Financials
                 </h4>
                 <div style="display:flex; flex-direction:column; gap:8px; font-size:14px; border-bottom:1px solid var(--border); padding-bottom:12px; margin-bottom:12px;">
+                    <div style="display:flex; justify-content:space-between;">
+                        <span style="color:var(--gray);">Payment Method:</span>
+                        <strong><?= ($o->payment_method ?? 'pay_later') === 'stripe' ? 'Stripe Gateway' : 'Pay Later' ?></strong>
+                    </div>
                     <div style="display:flex; justify-content:space-between;">
                         <span style="color:var(--gray);">Items Total:</span>
                         <strong>RM <?= number_format((float)$o->total_amount, 2) ?></strong>

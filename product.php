@@ -95,15 +95,19 @@ require_once __DIR__ . '/_head.php';
 
             <!-- Ratings Summary -->
             <div class="product-rating-row">
-                <span class="rating-stars-gold">
-                    <?= str_repeat('★', (int)round($avg_rating ?: 5)) ?>
-                </span>
-                <span class="rating-score-text">
-                    <?= $avg_rating ? $avg_rating : '5.0' ?> / 5.0
-                </span>
-                <span class="rating-count-text">
-                    (<?= count($reviews) ?> customer review<?= count($reviews) !== 1 ? 's' : '' ?>)
-                </span>
+                <?php if (!empty($reviews)): ?>
+                    <span class="rating-stars-gold">
+                        <?= str_repeat('★', (int)round($avg_rating)) ?>
+                    </span>
+                    <span class="rating-score-text">
+                        <?= number_format($avg_rating, 1) ?> / 5.0
+                    </span>
+                    <span class="rating-count-text">
+                        (<?= count($reviews) ?> customer review<?= count($reviews) !== 1 ? 's' : '' ?>)
+                    </span>
+                <?php else: ?>
+                    <span class="rating-count-text">No reviews yet</span>
+                <?php endif; ?>
             </div>
 
             <!-- Price -->

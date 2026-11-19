@@ -39,23 +39,29 @@ $discount_amount = 0;
 $applied_code = $_SESSION['applied_voucher'] ?? null;
 $applied_voucher = null;
 
-if ($applied_code && $subtotal > 0) {
-    $v_stmt = $db->prepare('SELECT * FROM `voucher` WHERE `code` = ? AND `is_active` = 1 AND `expires_at` > NOW() LIMIT 1');
-    $v_stmt->execute([$applied_code]);
-    $v_check = $v_stmt->fetch();
+if ($applied_code) {
+    if ($subtotal <= 0) {
+        unset($_SESSION['applied_voucher']);
+        set_flash('warning', "Voucher {$applied_code} is no longer valid and was removed.");
+    } else {
+        $v_stmt = $db->prepare('SELECT * FROM `voucher` WHERE `code` = ? AND `is_active` = 1 AND `expires_at` > NOW() LIMIT 1');
+        $v_stmt->execute([$applied_code]);
+        $v_check = $v_stmt->fetch();
 
-    if ($v_check && $v_check->used_count < $v_check->usage_limit && $subtotal >= (float)$v_check->min_spend) {
-        $applied_voucher = $v_check;
-        if ($v_check->discount_type === 'percentage') {
-            $discount_amount = ($subtotal * ((float)$v_check->discount_value / 100));
-            if ($v_check->max_discount) {
-                $discount_amount = min($discount_amount, (float)$v_check->max_discount);
+        if ($v_check && $v_check->used_count < $v_check->usage_limit && $subtotal >= (float)$v_check->min_spend) {
+            $applied_voucher = $v_check;
+            if ($v_check->discount_type === 'percentage') {
+                $discount_amount = ($subtotal * ((float)$v_check->discount_value / 100));
+                if ($v_check->max_discount) {
+                    $discount_amount = min($discount_amount, (float)$v_check->max_discount);
+                }
+            } else {
+                $discount_amount = min($subtotal, (float)$v_check->discount_value);
             }
         } else {
-            $discount_amount = min($subtotal, (float)$v_check->discount_value);
+            unset($_SESSION['applied_voucher']);
+            set_flash('warning', "Voucher {$applied_code} is no longer valid and was removed.");
         }
-    } else {
-        unset($_SESSION['applied_voucher']);
     }
 }
 
@@ -204,7 +210,8 @@ if (is_post()) {
                     if (!$is_valid_v) {
                         $db->rollBack();
                         unset($_SESSION['applied_voucher']);
-                        $errors['order'] = "Voucher '{$applied_code}' is invalid, expired, or has reached its redemption limit.";
+                        set_flash('warning', "Voucher {$applied_code} is no longer valid and was removed.");
+                        $errors['order'] = "Voucher {$applied_code} is no longer valid and was removed.";
                     } else {
                         $voucher_id_to_increment = (int)$v_row->id;
                         if ($v_row->discount_type === 'percentage') {
@@ -223,7 +230,8 @@ if (is_post()) {
                         if ($v_up->rowCount() !== 1) {
                             $db->rollBack();
                             unset($_SESSION['applied_voucher']);
-                            $errors['order'] = "Voucher '{$applied_code}' has just reached its maximum redemption limit.";
+                            set_flash('warning', "Voucher {$applied_code} is no longer valid and was removed.");
+                            $errors['order'] = "Voucher {$applied_code} is no longer valid and was removed.";
                         }
                     }
                 }
@@ -248,8 +256,8 @@ if (is_post()) {
 
                     // G. Create master order record: status 'Pending', payment_status 'Unpaid', tracking_no NULL
                     $ins_ord = $db->prepare('
-                        INSERT INTO `order` (`order_no`, `user_id`, `address_id`, `total_amount`, `discount_amount`, `final_amount`, `status`, `payment_status`, `tracking_no`) 
-                        VALUES (?, ?, ?, ?, ?, ?, "Pending", "Unpaid", NULL)
+                        INSERT INTO `order` (`order_no`, `user_id`, `address_id`, `total_amount`, `discount_amount`, `final_amount`, `status`, `payment_status`, `payment_method`, `tracking_no`) 
+                        VALUES (?, ?, ?, ?, ?, ?, "Pending", "Unpaid", ?, NULL)
                     ');
                     $ins_ord->execute([
                         $order_no,
@@ -257,7 +265,8 @@ if (is_post()) {
                         $target_address_id,
                         number_format($live_subtotal, 2, '.', ''),
                         number_format($voucher_discount, 2, '.', ''),
-                        number_format($live_final_total, 2, '.', '')
+                        number_format($live_final_total, 2, '.', ''),
+                        $payment_method
                     ]);
                     $order_id = (int)$db->lastInsertId();
 

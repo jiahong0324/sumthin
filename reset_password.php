@@ -75,7 +75,7 @@ require_once __DIR__ . '/_head.php';
 
         <?php if (!$valid_token): ?>
             <!-- Invalid or Expired Token State -->
-            <div class="flash-alert flash-error" style="margin-bottom: 24px;">
+            <div class="flash-alert flash-error mb-24">
                 <div class="flash-icon">✕</div>
                 <div class="flash-message">
                     This password reset link is invalid or has expired (links are valid for 1 hour).

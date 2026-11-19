@@ -60,5 +60,9 @@
     <script src="<?= base_url('js/lib/jquery-3.7.1.min.js') ?>"></script>
     <!-- Custom jQuery Application Script (No inline JS event handlers) -->
     <script src="<?= base_url('js/app.js') ?>"></script>
+    <?php if (file_exists(__DIR__ . '/js/admin.js')): ?>
+        <!-- Admin jQuery Handlers (No inline JS) -->
+        <script src="<?= base_url('js/admin.js') ?>"></script>
+    <?php endif; ?>
 </body>
 </html>

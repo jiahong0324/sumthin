@@ -58,18 +58,18 @@ $title = 'My Wishlist';
 require_once __DIR__ . '/_head.php';
 ?>
 
-<div class="container" style="max-width: 950px;">
+<div class="container container-history">
     <!-- Title -->
-    <div style="margin-bottom: 24px;">
-        <h1 style="font-size:28px; font-weight:800; color:var(--dark);">My Saved Wishlist</h1>
-        <p style="font-size:14px; color:var(--gray);">Tech gadgets you have bookmarked for future purchase.</p>
+    <div class="mb-24">
+        <h1 class="page-header-title">My Saved Wishlist</h1>
+        <p class="page-header-desc">Tech gadgets you have bookmarked for future purchase.</p>
     </div>
 
     <?php if (empty($items)): ?>
-        <div style="background:#fff; border:1px solid var(--border); border-radius:var(--radius-lg); padding:60px 20px; text-align:center; box-shadow:var(--shadow-sm);">
-            <div style="font-size:48px; margin-bottom:12px;">❤️</div>
-            <h2 style="font-size:20px; font-weight:800; color:var(--dark); margin-bottom:8px;">Your wishlist is currently empty</h2>
-            <p style="font-size:14px; color:var(--gray); margin-bottom:20px;">Save products while browsing to keep track of items you love.</p>
+        <div class="empty-state-panel">
+            <div class="empty-state-icon">❤️</div>
+            <h2 class="empty-state-title">Your wishlist is currently empty</h2>
+            <p class="empty-state-desc mb-20">Save products while browsing to keep track of items you love.</p>
             <a href="<?= base_url('index.php') ?>" class="btn btn-primary">Browse sumthin Catalog &rarr;</a>
         </div>
     <?php else: ?>
@@ -85,21 +85,21 @@ require_once __DIR__ . '/_head.php';
                     </div>
 
                     <h3 class="product-name">
-                        <a href="<?= base_url('product.php?id=' . (int)$p->id) ?>" style="text-decoration:none; color:inherit;">
+                        <a href="<?= base_url('product.php?id=' . (int)$p->id) ?>" class="product-title-link">
                             <?= encode($p->name) ?>
                         </a>
                     </h3>
 
-                    <div class="product-footer" style="margin-top:auto;">
+                    <div class="product-footer mt-auto">
                         <span class="product-price">RM <?= number_format((float)$p->price, 2) ?></span>
-                        <div style="display:flex; gap:6px;">
+                        <div class="product-card-actions">
                             <?php if ($p->stock > 0): ?>
                                 <form action="<?= base_url('cart_action.php') ?>" method="POST">
                                     <?= csrf_field() ?>
                                     <input type="hidden" name="action" value="add">
                                     <input type="hidden" name="product_id" value="<?= (int)$p->id ?>">
                                     <input type="hidden" name="quantity" value="1">
-                                    <button type="submit" class="btn btn-primary-sm" style="font-size:11px;">+ Cart</button>
+                                    <button type="submit" class="btn btn-primary-sm fs-11">+ Cart</button>
                                 </form>
                             <?php endif; ?>
 
@@ -107,7 +107,7 @@ require_once __DIR__ . '/_head.php';
                                 <?= csrf_field() ?>
                                 <input type="hidden" name="action" value="remove">
                                 <input type="hidden" name="product_id" value="<?= (int)$p->id ?>">
-                                <button type="submit" class="btn btn-outline-sm" style="font-size:11px; color:var(--error);" title="Remove">&times;</button>
+                                <button type="submit" class="btn btn-outline-sm fs-11 text-danger" title="Remove">&times;</button>
                             </form>
                         </div>
                     </div>

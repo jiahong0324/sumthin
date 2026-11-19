@@ -17,11 +17,17 @@ if (is_post()) {
     // 1. Verify CSRF Token
     verify_csrf();
 
+    // 2. Cloudflare Turnstile Captcha Verification (if enabled)
+    // Must be verified BEFORE checking credentials and must NOT count as a failed attempt
+    if (!empty($config['captcha']['enabled']) && !captcha_verify()) {
+        $errors['captcha'] = 'Please complete the captcha.';
+    }
+
     $email       = req('email');
     $password    = req('password');
     $remember_me = req('remember_me');
 
-    // 2. Server-side validation
+    // 3. Server-side validation
     if ($email === '') {
         $errors['email'] = 'Email address is required.';
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -32,7 +38,7 @@ if (is_post()) {
         $errors['password'] = 'Password is required.';
     }
 
-    // 3. Authenticate if validation passed
+    // 4. Authenticate if validation passed (only if captcha and form fields passed)
     if (empty($errors)) {
         // Query user record by email
         $stmt = $db->prepare('SELECT * FROM `user` WHERE `email` = ? LIMIT 1');
@@ -44,72 +50,75 @@ if (is_post()) {
             if ($user->status === 'Blocked') {
                 $errors['auth'] = 'Your account has been deactivated. Please contact support.';
             }
-            // Check temporary brute-force lockout
+            // Check temporary brute-force lockout (generic message prevents account enumeration)
             elseif ($user->locked_until && strtotime($user->locked_until) > time()) {
-                $remaining_mins = ceil((strtotime($user->locked_until) - time()) / 60);
-                $errors['auth'] = "Account is temporarily locked due to multiple failed attempts. Please try again in {$remaining_mins} minute(s).";
+                $errors['auth'] = 'Too many failed attempts. Please try again later.';
             }
             // Verify password hash
             elseif (password_verify($password, $user->password_hash)) {
-                // Successful Login:
-                // a. Prevent session fixation
-                session_regenerate_id(true);
-
-                // b. Reset failed login attempts in DB
-                reset_login_attempts($user->id);
-
-                // c. Store authenticated user profile in session (excluding sensitive password hash)
-                unset($user->password_hash);
-                $_SESSION['user'] = $user;
-
-                // d. Handle Remember Me token (Store SHA-256 hash in DB, raw in cookie)
-                if ($remember_me) {
-                    $token      = bin2hex(random_bytes(32));
-                    $token_hash = hash('sha256', $token);
-                    $update_tok = $db->prepare('UPDATE `user` SET `remember_token` = ? WHERE `id` = ?');
-                    $update_tok->execute([$token_hash, $user->id]);
-
-                    $is_https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') 
-                             || (isset($_SERVER['SERVER_PORT']) && (int)$_SERVER['SERVER_PORT'] === 443);
-
-                    setcookie('sumthin_remember', $token, [
-                        'expires'  => time() + (30 * 86400), // 30 days
-                        'path'     => '/',
-                        'httponly' => true,
-                        'secure'   => $is_https,
-                        'samesite' => 'Lax'
-                    ]);
-                }
-
-                set_flash('success', 'Welcome back, ' . $user->name . '!');
-
-                // e. Redirect to intended destination or role dashboard
-                if (!empty($_SESSION['redirect_after_login'])) {
-                    $redirect_target = $_SESSION['redirect_after_login'];
-                    unset($_SESSION['redirect_after_login']);
-                    redirect($redirect_target);
-                }
-
-                if ($user->role === 'Admin') {
-                    redirect(base_url('admin/index.php'));
+                // Check if Member email is verified (Admins are exempt)
+                if ($user->role === 'Member' && empty($user->email_verified_at)) {
+                    $resend_url = base_url('resend_verification.php?email=' . urlencode($user->email));
+                    $errors['auth'] = 'Please verify your email first. <a href="' . encode($resend_url) . '" class="form-link" style="text-decoration:underline; font-weight:700;">Resend verification email</a>';
                 } else {
-                    redirect(base_url('index.php'));
+                    // Successful Login:
+                    // a. Prevent session fixation
+                    session_regenerate_id(true);
+
+                    // b. Reset failed login attempts in DB
+                    reset_login_attempts($user->id);
+
+                    // c. Store authenticated user profile in session (excluding sensitive password hash)
+                    unset($user->password_hash);
+                    $_SESSION['user'] = $user;
+
+                    // d. Handle Remember Me token (Store SHA-256 hash in DB, raw in cookie)
+                    if ($remember_me) {
+                        $token      = bin2hex(random_bytes(32));
+                        $token_hash = hash('sha256', $token);
+                        $update_tok = $db->prepare('UPDATE `user` SET `remember_token` = ? WHERE `id` = ?');
+                        $update_tok->execute([$token_hash, $user->id]);
+
+                        $is_https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') 
+                                 || (isset($_SERVER['SERVER_PORT']) && (int)$_SERVER['SERVER_PORT'] === 443);
+
+                        setcookie('sumthin_remember', $token, [
+                            'expires'  => time() + (30 * 86400), // 30 days
+                            'path'     => '/',
+                            'httponly' => true,
+                            'secure'   => $is_https,
+                            'samesite' => 'Lax'
+                        ]);
+                    }
+
+                    set_flash('success', 'Welcome back, ' . $user->name . '!');
+
+                    // e. Redirect to intended destination or role dashboard
+                    if (!empty($_SESSION['redirect_after_login'])) {
+                        $redirect_target = $_SESSION['redirect_after_login'];
+                        unset($_SESSION['redirect_after_login']);
+                        redirect($redirect_target);
+                    }
+
+                    if ($user->role === 'Admin') {
+                        redirect(base_url('admin/index.php'));
+                    } else {
+                        redirect(base_url('index.php'));
+                    }
                 }
             } else {
                 // Password incorrect -> record failed attempt
                 record_login_attempt($email);
                 
-                // Check newly updated attempt count
-                $check_stmt = $db->prepare('SELECT `failed_attempts` FROM `user` WHERE `id` = ?');
+                // Check if account has been locked by reaching the attempt limit
+                $check_stmt = $db->prepare('SELECT `locked_until` FROM `user` WHERE `id` = ?');
                 $check_stmt->execute([$user->id]);
                 $fresh = $check_stmt->fetch();
-                $max_fails = (int)setting('max_login_fails', (string)$config['app']['max_login_fails']);
-                $remaining = max(0, $max_fails - $fresh->failed_attempts);
 
-                if ($remaining === 0) {
-                    $errors['auth'] = 'Account locked! 3 consecutive failed login attempts reached. Locked for 15 minutes.';
+                if ($fresh && $fresh->locked_until && strtotime($fresh->locked_until) > time()) {
+                    $errors['auth'] = 'Too many failed attempts. Please try again later.';
                 } else {
-                    $errors['auth'] = "Invalid email or password. ({$remaining} attempt(s) remaining before temporary lockout).";
+                    $errors['auth'] = 'Invalid email or password.';
                 }
             }
         } else {
@@ -132,9 +141,9 @@ require_once __DIR__ . '/_head.php';
         </div>
 
         <?php if (isset($errors['auth'])): ?>
-            <div class="flash-alert flash-error" style="margin-bottom: 20px;">
+            <div class="flash-alert flash-error mb-20">
                 <div class="flash-icon">✕</div>
-                <div class="flash-message"><?= encode($errors['auth']) ?></div>
+                <div class="flash-message"><?= $errors['auth'] ?></div>
             </div>
         <?php endif; ?>
 
@@ -154,9 +163,9 @@ require_once __DIR__ . '/_head.php';
 
             <!-- Password Field -->
             <div class="form-group">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div class="flex-between">
                     <label for="password" class="form-label">Password</label>
-                    <a href="<?= base_url('forgot_password.php') ?>" class="form-link" style="font-size:12px;">Forgot?</a>
+                    <a href="<?= base_url('forgot_password.php') ?>" class="form-link fs-12">Forgot?</a>
                 </div>
                 <?= html_password('password', [
                     'placeholder' => 'Enter your password',
@@ -169,6 +178,10 @@ require_once __DIR__ . '/_head.php';
             <div class="form-row">
                 <?= html_checkbox('remember_me', '1', !empty($remember_me), 'Remember me for 30 days') ?>
             </div>
+
+            <!-- Cloudflare Turnstile Captcha Widget -->
+            <?= captcha_widget() ?>
+            <?= err('captcha') ?>
 
             <!-- Submit Button -->
             <button type="submit" class="btn btn-primary btn-block">Sign In</button>

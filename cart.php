@@ -68,17 +68,16 @@ $discount_amount = 0;
 $applied_code = $_SESSION['applied_voucher'] ?? null;
 $applied_voucher = null;
 
-if ($applied_code && $subtotal > 0) {
-    $v_stmt = $db->prepare('SELECT * FROM `voucher` WHERE `code` = ? AND `is_active` = 1 AND `expires_at` > NOW() LIMIT 1');
-    $v_stmt->execute([$applied_code]);
-    $voucher = $v_stmt->fetch();
+if ($applied_code) {
+    if ($subtotal <= 0) {
+        unset($_SESSION['applied_voucher']);
+        set_flash('warning', "Voucher {$applied_code} is no longer valid and was removed.");
+    } else {
+        $v_stmt = $db->prepare('SELECT * FROM `voucher` WHERE `code` = ? AND `is_active` = 1 AND `expires_at` > NOW() LIMIT 1');
+        $v_stmt->execute([$applied_code]);
+        $voucher = $v_stmt->fetch();
 
-    if ($voucher && $voucher->used_count < $voucher->usage_limit) {
-        if ($subtotal < (float)$voucher->min_spend) {
-            $min_spend = number_format((float)$voucher->min_spend, 2);
-            set_flash('warning', "Voucher '{$voucher->code}' requires a minimum spend of RM {$min_spend}.");
-            unset($_SESSION['applied_voucher']);
-        } else {
+        if ($voucher && $voucher->used_count < $voucher->usage_limit && $subtotal >= (float)$voucher->min_spend) {
             $applied_voucher = $voucher;
             if ($voucher->discount_type === 'percentage') {
                 $discount_amount = ($subtotal * ((float)$voucher->discount_value / 100));
@@ -88,13 +87,11 @@ if ($applied_code && $subtotal > 0) {
             } else {
                 $discount_amount = min($subtotal, (float)$voucher->discount_value);
             }
+        } else {
+            unset($_SESSION['applied_voucher']);
+            set_flash('warning', "Voucher {$applied_code} is no longer valid and was removed.");
         }
-    } else {
-        unset($_SESSION['applied_voucher']);
-        set_flash('warning', 'The previously applied voucher is inactive, expired, or fully redeemed.');
     }
-} else {
-    unset($_SESSION['applied_voucher']);
 }
 
 // Shipping calculation (Dynamic settings from store configuration)

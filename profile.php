@@ -70,22 +70,22 @@ $title = 'My Profile';
 require_once __DIR__ . '/_head.php';
 ?>
 
-<div class="container" style="max-width: 750px;">
+<div class="container container-profile">
     <!-- Profile Header -->
-    <div style="background:#fff; border:1px solid var(--border); border-radius:var(--radius); padding:28px; margin-bottom:24px; display:flex; align-items:center; gap:24px; box-shadow:var(--shadow-sm);">
-        <div style="width:90px; height:90px; border-radius:50%; overflow:hidden; border:3px solid var(--primary); background:#f1f5f9; flex-shrink:0;">
-            <img src="<?= base_url('uploads/members/' . encode($photo)) ?>" alt="<?= encode($name) ?>" style="width:100%; height:100%; object-fit:cover;">
+    <div class="profile-header-card">
+        <div class="profile-avatar-wrapper">
+            <img src="<?= base_url('uploads/members/' . encode($photo)) ?>" alt="<?= encode($name) ?>" class="profile-avatar-img">
         </div>
         <div>
-            <h1 style="font-size:24px; font-weight:800; color:var(--dark); margin-bottom:4px;"><?= encode($name) ?></h1>
-            <p style="font-size:13px; color:var(--gray); margin-bottom:8px;"><?= encode($email) ?> &bull; <span class="role-pill <?= is_admin() ? 'pill-admin' : 'pill-member' ?>"><?= encode($u->role) ?></span></p>
-            <a href="<?= base_url('change_password.php') ?>" class="btn btn-outline-sm" style="font-size:12px;">Change Password &rarr;</a>
+            <h1 class="profile-name"><?= encode($name) ?></h1>
+            <p class="profile-meta"><?= encode($email) ?> &bull; <span class="role-pill <?= is_admin() ? 'pill-admin' : 'pill-member' ?>"><?= encode($u->role) ?></span></p>
+            <a href="<?= base_url('change_password.php') ?>" class="btn btn-outline-sm fs-12">Change Password &rarr;</a>
         </div>
     </div>
 
     <!-- Edit Profile Card -->
-    <div style="background:#fff; border:1px solid var(--border); border-radius:var(--radius); padding:32px; box-shadow:var(--shadow-sm);">
-        <h2 style="font-size:18px; font-weight:700; color:var(--dark); margin-bottom:20px; border-bottom:1px solid var(--border); padding-bottom:12px;">Edit Personal Details</h2>
+    <div class="card-panel-body">
+        <h2 class="card-heading-bordered">Edit Personal Details</h2>
 
         <form action="<?= base_url('profile.php') ?>" method="POST" enctype="multipart/form-data" novalidate>
             <?= csrf_field() ?>
@@ -93,7 +93,7 @@ require_once __DIR__ . '/_head.php';
             <!-- Email (Read-Only) -->
             <div class="form-group">
                 <label class="form-label">Email Address (Account Identifier)</label>
-                <input type="text" value="<?= encode($email) ?>" class="form-control" disabled style="background:#f8fafc; color:var(--gray); cursor:not-allowed;">
+                <input type="text" value="<?= encode($email) ?>" class="form-control" disabled>
                 <span class="form-help">Email cannot be changed for account security.</span>
             </div>
 
@@ -120,7 +120,7 @@ require_once __DIR__ . '/_head.php';
                 <span class="form-help">Accepted formats: JPG, JPEG, PNG, WEBP. Maximum file size: 2 MB.</span>
             </div>
 
-            <div style="margin-top:24px; border-top:1px solid var(--border); padding-top:20px;">
+            <div class="form-actions">
                 <button type="submit" class="btn btn-primary">Save Profile Changes</button>
             </div>
         </form>

@@ -16,6 +16,11 @@ $email = '';
 if (is_post()) {
     verify_csrf();
 
+    // Cloudflare Turnstile Captcha Verification (if enabled)
+    if (!empty($config['captcha']['enabled']) && !captcha_verify()) {
+        $errors['captcha'] = 'Please complete the captcha.';
+    }
+
     $email = req('email');
 
     if ($email === '') {
@@ -45,11 +50,9 @@ if (is_post()) {
             $ins = $db->prepare('INSERT INTO `password_reset` (`email`, `token`, `expires_at`, `created_at`) VALUES (?, ?, ?, NOW())');
             $ins->execute([$email, $token_hash, $expires_at]);
 
-            // Construct secure reset link with raw unhashed token
-            $host_prefix = isset($_SERVER['HTTP_HOST'])
-                ? ((isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST'])
-                : '';
-            $reset_url = $host_prefix . base_url("reset_password.php?token={$raw_token}");
+            // Construct secure reset link using fixed app.url config (prevents Host header injection)
+            $app_url = rtrim($config['app']['url'] ?? 'http://localhost/sumthin', '/');
+            $reset_url = $app_url . '/reset_password.php?token=' . urlencode($raw_token);
 
             // Compose HTML email body
             $html_body = "<p>Hello <strong>" . encode($user->name) . "</strong>,</p>"
@@ -94,6 +97,10 @@ require_once __DIR__ . '/_head.php';
                 ]) ?>
                 <?= err('email') ?>
             </div>
+
+            <!-- Cloudflare Turnstile Captcha Widget -->
+            <?= captcha_widget() ?>
+            <?= err('captcha') ?>
 
             <button type="submit" class="btn btn-primary btn-block">Send Reset Link</button>
         </form>

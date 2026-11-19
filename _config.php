@@ -21,6 +21,7 @@ return [
     'app' => [
         'name'            => 'sumthin',
         'tagline'         => 'Curated Tech Gadgets & Daily Essentials',
+        'url'             => 'http://localhost/sumthin',
         'base_url'        => '/sumthin', // Project folder inside htdocs
         'session_timeout' => 1800,       // 30 minutes in seconds
         'max_login_fails' => 3,          // Lock account after 3 failed attempts
@@ -58,5 +59,12 @@ return [
     'datadog' => [
         'api_key' => 'DATADOG_API_KEY_PLACEHOLDER',
         'site'    => 'datadoghq.com',
+    ],
+
+    // Cloudflare Turnstile Captcha
+    'captcha' => [
+        'enabled'    => true,
+        'site_key'   => 'PLACEHOLDER',
+        'secret_key' => 'PLACEHOLDER',
     ],
 ];

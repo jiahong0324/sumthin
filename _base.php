@@ -68,14 +68,16 @@ try {
     // Graceful error display without revealing credentials
     $debug_info = '';
     if (!empty($config['app']['debug'])) {
-        $debug_info = '<pre style="background:#fff;padding:10px;border-radius:4px;border:1px solid #fca5a5;font-size:12px;overflow:auto;">' . htmlspecialchars($e->getMessage()) . '</pre>';
+        $debug_info = '<pre class="db-error-pre">' . htmlspecialchars($e->getMessage()) . '</pre>';
     }
-    die('<div style="font-family:sans-serif;padding:30px;max-width:600px;margin:50px auto;border:1px solid #ef4444;background:#fef2f2;border-radius:8px;">'
-        . '<h2 style="color:#b91c1c;margin-top:0;">Database Connection Error</h2>'
-        . '<p style="color:#4b5563;">Could not connect to the database <strong>' . htmlspecialchars($config['db']['dbname']) . '</strong>.</p>'
-        . '<p style="color:#6b7280;font-size:14px;"><strong>Tips:</strong> Ensure Apache & MySQL are running in XAMPP, and that you have imported <code>database/sumthin_db.sql</code> via phpMyAdmin.</p>'
+    $css_link = (!empty($config['app']['base_url']) ? rtrim($config['app']['base_url'], '/') : '') . '/css/app.css';
+    die('<!DOCTYPE html><html><head><meta charset="utf-8"><title>Database Error</title><link rel="stylesheet" href="' . htmlspecialchars($css_link) . '"></head><body>'
+        . '<div class="db-error-box">'
+        . '<h2 class="db-error-title">Database Connection Error</h2>'
+        . '<p class="db-error-msg">Could not connect to the database <strong>' . htmlspecialchars($config['db']['dbname']) . '</strong>.</p>'
+        . '<p class="db-error-tips"><strong>Tips:</strong> Ensure Apache & MySQL are running in XAMPP, and that you have imported <code>database/sumthin_db.sql</code> via phpMyAdmin.</p>'
         . $debug_info
-        . '</div>');
+        . '</div></body></html>');
 }
 
 // 5. Global Error Collector for Server-Side Form Validation
@@ -212,6 +214,90 @@ function verify_csrf(): void {
             http_response_code(403);
             die('<h1 style="font-family:sans-serif;color:#dc2626;text-align:center;margin-top:100px;">403 Forbidden - Invalid or Expired CSRF Token</h1>');
         }
+    }
+}
+
+// ============================================================================
+// HELPER FUNCTIONS: Cloudflare Turnstile CAPTCHA Protection
+// ============================================================================
+
+/**
+ * Output Cloudflare Turnstile CAPTCHA widget div and provider script tag (rendered once per page)
+ */
+function captcha_widget(): string {
+    global $config;
+    if (empty($config['captcha']['enabled'])) {
+        return '';
+    }
+
+    $site_key = (string)($config['captcha']['site_key'] ?? '');
+    if ($site_key === '') {
+        return '';
+    }
+
+    static $script_loaded = false;
+    $script = '';
+    if (!$script_loaded) {
+        $script = '<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>';
+        $script_loaded = true;
+    }
+
+    return $script . '<div class="cf-turnstile" data-sitekey="' . encode($site_key) . '" style="margin: 14px 0;"></div>';
+}
+
+/**
+ * Verify Cloudflare Turnstile CAPTCHA response server-side via cURL
+ *
+ * @return bool True if verification passes or captcha is disabled; false on failure (fail closed)
+ */
+function captcha_verify(): bool {
+    global $config;
+    if (empty($config['captcha']['enabled'])) {
+        return true;
+    }
+
+    $secret = (string)($config['captcha']['secret_key'] ?? '');
+    $response = (string)($_POST['cf-turnstile-response'] ?? '');
+    $ip = (string)($_SERVER['REMOTE_ADDR'] ?? '');
+
+    // Any missing secret or response fails closed
+    if ($secret === '' || $secret === 'PLACEHOLDER' || $response === '') {
+        return false;
+    }
+
+    try {
+        $ch = curl_init('https://challenges.cloudflare.com/turnstile/v0/siteverify');
+        if (!$ch) {
+            return false;
+        }
+
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query([
+            'secret'   => $secret,
+            'response' => $response,
+            'remoteip' => $ip,
+        ]));
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+
+        $result_body = curl_exec($ch);
+        $http_code   = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curl_err    = curl_error($ch);
+        curl_close($ch);
+
+        if ($result_body === false || $http_code !== 200) {
+            if ($curl_err) {
+                error_log('Turnstile siteverify cURL error: ' . $curl_err);
+            }
+            return false;
+        }
+
+        $data = json_decode($result_body, true);
+        return is_array($data) && !empty($data['success']);
+    } catch (\Throwable $e) {
+        error_log('Turnstile siteverify exception: ' . $e->getMessage());
+        return false;
     }
 }
 
@@ -540,6 +626,9 @@ function reset_login_attempts(int $user_id): void {
 function log_email(string $recipient, string $subject, string $body, string $status = 'Sent', string $type = 'system', ?int $sent_by = null): void {
     global $db;
     try {
+        if ($type === 'auth') {
+            $body = '[redacted - contains secure link]';
+        }
         $stmt = $db->prepare('INSERT INTO `email_log` (`recipient`, `subject`, `body`, `status`, `type`, `sent_by`) VALUES (?, ?, ?, ?, ?, ?)');
         $stmt->execute([$recipient, $subject, $body, $status, $type, $sent_by]);
     } catch (Exception $e) {
@@ -627,6 +716,12 @@ function cancel_order(int $order_id, ?int $user_id = null, string $actor = 'Memb
         // 5. Update master order record
         $up = $db->prepare('UPDATE `order` SET `status` = "Cancelled", `payment_status` = ?, `tracking_no` = NULL WHERE `id` = ?');
         $up->execute([$new_payment_status, $order_id]);
+
+        // 5b. Record payment status as Refunded when a Paid order is cancelled
+        if ($order->payment_status === 'Paid') {
+            $up_pay = $db->prepare('UPDATE `payment` SET `status` = "Refunded" WHERE `order_id` = ?');
+            $up_pay->execute([$order_id]);
+        }
 
         // 6. Restore product stock quantities
         $items_stmt = $db->prepare('SELECT `product_id`, `quantity` FROM `order_item` WHERE `order_id` = ?');
