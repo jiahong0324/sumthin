@@ -2091,6 +2091,7 @@ body.dark-theme .cart-item-row {
    ========================================================================== */
 
 /* Spacing & Sizing Utilities */
+.my-14   { margin-top: 14px; margin-bottom: 14px; }
 .mt-10   { margin-top: 10px; }
 .mt-20   { margin-top: 20px; }
 .mt-24   { margin-top: 24px; }
