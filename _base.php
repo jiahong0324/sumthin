@@ -162,6 +162,19 @@ function base_url(string $path = ''): string {
 }
 
 /**
+ * Return public URL for a product photo with automatic cache-busting timestamp
+ */
+function product_photo_url(?string $filename): string {
+    $file = trim((string)$filename);
+    if ($file === '' || $file === 'default_product.png') {
+        $file = 'default_product.png';
+    }
+    $disk_path = __DIR__ . '/uploads/products/' . $file;
+    $v = file_exists($disk_path) ? filemtime($disk_path) : 1;
+    return base_url('uploads/products/' . encode($file)) . '?v=' . $v;
+}
+
+/**
  * Redirect browser to a given internal or external URL
  */
 function redirect(string $url): void {

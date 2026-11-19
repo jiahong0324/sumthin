@@ -296,7 +296,7 @@ require_once __DIR__ . '/../_head.php';
                 <?php foreach ($items as $it): ?>
                     <div class="order-item-row">
                         <div class="order-item-thumb-admin">
-                            <img src="<?= base_url('uploads/products/' . encode($it->photo_url)) ?>" alt="<?= encode($it->name) ?>" class="order-thumb-img">
+                            <img src="<?= product_photo_url($it->photo_url) ?>" alt="<?= encode($it->name) ?>" class="order-thumb-img">
                         </div>
                         <div class="flex-1">
                             <h4 class="order-item-name"><?= encode($it->name) ?></h4>

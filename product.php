@@ -90,7 +90,7 @@ require_once __DIR__ . '/_head.php';
             <div class="product-slider" id="product-slider">
                 <div class="slider-main-stage">
                     <img id="slider-main-img" 
-                         src="<?= base_url('uploads/products/' . encode($primary_photo)) ?>" 
+                         src="<?= product_photo_url($primary_photo) ?>" 
                          alt="<?= encode($p->name) ?>" 
                          class="slider-main-img">
 
@@ -106,9 +106,9 @@ require_once __DIR__ . '/_head.php';
                             <button type="button" 
                                     class="slider-thumb-btn <?= $idx === 0 ? 'active' : '' ?>" 
                                     data-index="<?= $idx ?>" 
-                                    data-src="<?= base_url('uploads/products/' . encode($ph->photo_url)) ?>"
+                                    data-src="<?= product_photo_url($ph->photo_url) ?>"
                                     aria-label="View photo <?= $idx + 1 ?>">
-                                <img src="<?= base_url('uploads/products/' . encode($ph->photo_url)) ?>" 
+                                <img src="<?= product_photo_url($ph->photo_url) ?>" 
                                      alt="Thumbnail <?= $idx + 1 ?>">
                             </button>
                         <?php endforeach; ?>

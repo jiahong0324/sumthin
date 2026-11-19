@@ -281,7 +281,7 @@ require_once __DIR__ . '/../_head.php';
                 <div class="photo-gallery-card <?= $ph->is_primary ? 'is-primary' : '' ?>">
                     <div>
                         <div class="photo-gallery-thumb">
-                            <img src="<?= base_url('uploads/products/' . encode($ph->photo_url)) ?>" 
+                            <img src="<?= product_photo_url($ph->photo_url) ?>" 
                                  alt="Photo <?= $idx + 1 ?>" 
                                  class="order-thumb-img">
                         </div>

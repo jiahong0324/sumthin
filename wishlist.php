@@ -88,7 +88,7 @@ require_once __DIR__ . '/_head.php';
             <?php foreach ($items as $p): ?>
                 <article class="product-card">
                     <div class="product-card-image-wrap">
-                        <img src="<?= base_url('uploads/products/' . encode($p->photo_url)) ?>" alt="<?= encode($p->name) ?>" class="product-card-img">
+                        <img src="<?= product_photo_url($p->photo_url) ?>" alt="<?= encode($p->name) ?>" class="product-card-img">
                     </div>
 
                     <div class="product-category-tag">

@@ -962,7 +962,7 @@ require_once __DIR__ . '/../_head.php';
                                         </td>
                                         <td>
                                             <div style="width:44px; height:44px; background:#0b0f19; border-radius:6px; overflow:hidden; display:flex; align-items:center; justify-content:center; border:1px solid #1e293b;">
-                                                <img src="<?= base_url('uploads/products/' . encode($p->photo_url)) ?>" 
+                                                <img src="<?= product_photo_url($p->photo_url) ?>" 
                                                      alt="<?= encode($p->name) ?>" 
                                                      style="max-width:100%; max-height:100%; object-fit:contain;">
                                             </div>

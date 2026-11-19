@@ -218,7 +218,7 @@ require_once __DIR__ . '/../_head.php';
                                 <!-- Thumbnail -->
                                 <td>
                                     <div class="product-item-thumb">
-                                        <img src="<?= base_url('uploads/products/' . encode($p->photo_url)) ?>" 
+                                        <img src="<?= product_photo_url($p->photo_url) ?>" 
                                              alt="<?= encode($p->name) ?>" 
                                              class="order-thumb-img">
                                     </div>

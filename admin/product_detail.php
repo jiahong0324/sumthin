@@ -91,7 +91,7 @@ require_once __DIR__ . '/../_head.php';
         <!-- Photo Preview & All Gallery Photos -->
         <div>
             <div class="admin-product-detail-main-img-box">
-                <img src="<?= base_url('uploads/products/' . encode($p->photo_url)) ?>" 
+                <img src="<?= product_photo_url($p->photo_url) ?>" 
                      alt="<?= encode($p->name) ?>" 
                      id="admin-detail-main-img"
                      class="order-thumb-img">
@@ -106,7 +106,7 @@ require_once __DIR__ . '/../_head.php';
                 <div class="d-flex gap-8 flex-wrap">
                     <?php foreach ($all_photos as $idx => $ph): ?>
                         <div class="product-mini-thumb <?= $ph->is_primary ? 'is-primary' : '' ?>" title="<?= encode($ph->photo_url) ?>">
-                            <img src="<?= base_url('uploads/products/' . encode($ph->photo_url)) ?>" 
+                            <img src="<?= product_photo_url($ph->photo_url) ?>" 
                                  alt="Photo <?= $idx + 1 ?>" 
                                  class="order-thumb-img">
                             <?php if ($ph->is_primary): ?>

@@ -117,7 +117,7 @@ require_once __DIR__ . '/_head.php';
                 <?php foreach ($items as $item): ?>
                     <div class="order-item-row">
                         <div class="order-item-thumb">
-                            <img src="<?= base_url('uploads/products/' . encode($item->photo_url)) ?>" alt="<?= encode($item->name) ?>" class="order-thumb-img">
+                            <img src="<?= product_photo_url($item->photo_url) ?>" alt="<?= encode($item->name) ?>" class="order-thumb-img">
                         </div>
                         <div class="flex-1">
                             <h3 class="order-item-name">

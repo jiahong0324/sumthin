@@ -140,7 +140,7 @@ require_once __DIR__ . '/_head.php';
                         <div class="cart-item-row" id="cart-item-<?= (int)$item->cart_id ?>" data-cart-id="<?= (int)$item->cart_id ?>">
                             <!-- Photo -->
                             <div class="cart-item-thumb">
-                                <img src="<?= base_url('uploads/products/' . encode($item->photo_url)) ?>" alt="<?= encode($item->name) ?>" class="cart-item-img">
+                                <img src="<?= product_photo_url($item->photo_url) ?>" alt="<?= encode($item->name) ?>" class="cart-item-img">
                             </div>
 
                             <!-- Details -->

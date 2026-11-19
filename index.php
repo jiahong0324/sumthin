@@ -313,7 +313,7 @@ require_once __DIR__ . '/_head.php';
                         <a href="<?= base_url('product.php?id=' . (int)$fd->id) ?>" class="shopee-flash-card">
                             <span class="flash-badge">-<?= (int)$fd->discount_pct ?>%</span>
                             <div class="flash-img-wrap">
-                                <img src="<?= base_url('uploads/products/' . encode($fd->photo_url)) ?>" 
+                                <img src="<?= product_photo_url($fd->photo_url) ?>" 
                                      alt="<?= encode($fd->name) ?>" 
                                      loading="lazy">
                             </div>
@@ -524,7 +524,7 @@ require_once __DIR__ . '/_head.php';
                     <!-- Product Photo with Floating Wishlist Heart -->
                     <div class="product-card-image-wrap">
                         <a href="<?= base_url('product.php?id=' . (int)$p->id) ?>" class="product-card-link">
-                            <img src="<?= base_url('uploads/products/' . encode($p->photo_url)) ?>" 
+                            <img src="<?= product_photo_url($p->photo_url) ?>" 
                                  alt="<?= encode($p->name) ?>" 
                                  class="product-card-img" 
                                  loading="lazy">
