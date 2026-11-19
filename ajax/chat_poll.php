@@ -51,14 +51,17 @@ if ($member_id > 0) {
         ];
     }
 
-    // 2. Mark incoming messages from the other party as read
-    $other_role = ($user->role === 'Admin') ? 'Member' : 'Admin';
-    $mark_stmt = $db->prepare('
-        UPDATE `chat_message`
-        SET `is_read` = 1
-        WHERE `member_id` = ? AND `sender_role` = ? AND `is_read` = 0
-    ');
-    $mark_stmt->execute([$member_id, $other_role]);
+    // 2. Mark incoming messages from the other party as read (if mark_read is enabled)
+    $should_mark_read = (int)req('mark_read', 1) === 1;
+    if ($should_mark_read) {
+        $other_role = ($user->role === 'Admin') ? 'Member' : 'Admin';
+        $mark_stmt = $db->prepare('
+            UPDATE `chat_message`
+            SET `is_read` = 1
+            WHERE `member_id` = ? AND `sender_role` = ? AND `is_read` = 0
+        ');
+        $mark_stmt->execute([$member_id, $other_role]);
+    }
 }
 
 // 3. Compute overall unread count for navbar badge

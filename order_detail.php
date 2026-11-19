@@ -131,7 +131,7 @@ require_once __DIR__ . '/_head.php';
                             <?php if ($o->status === 'Delivered'): ?>
                                 <?php
                                 $rev_chk = $db->prepare('SELECT id FROM review WHERE user_id = ? AND product_id = ? AND order_id = ? LIMIT 1');
-                                $rev_chk->execute([$user->id, $item->product_id, $id]);
+                                $rev_chk->execute([$user_id, $item->product_id, $order_id]);
                                 $already_reviewed = (bool)$rev_chk->fetch();
                                 ?>
                                 <div class="mt-6">

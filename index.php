@@ -186,7 +186,7 @@ require_once __DIR__ . '/_head.php';
 
     <?php if ($is_default_view): ?>
         <!-- ==================================================================
-             1. SHOPEE HERO PROMOTIONAL BANNER CAROUSEL & SIDE PROMOS
+             1. APPLE HERO CINEMATIC SHOWCASE & SIDE PROMOS
              ================================================================== -->
         <section class="shopee-hero-wrap">
             <!-- Main Hero Carousel -->
@@ -194,11 +194,11 @@ require_once __DIR__ . '/_head.php';
                 <!-- Slide 1 -->
                 <div class="shopee-slide shopee-slide-1 active">
                     <div class="shopee-slide-content">
-                        <span class="shopee-slide-badge">⚡ MEGA PAYDAY TECH SALE</span>
-                        <h2 class="shopee-slide-title">Up to 50% OFF High-Speed GaN Chargers</h2>
-                        <p class="shopee-slide-desc">Ultra-fast multi-port chargers & smart laptop power banks with 2-Year Official Warranty.</p>
+                        <span class="shopee-slide-badge">sumthin Pro &bull; GaN Architecture</span>
+                        <h2 class="shopee-slide-title">High-Speed GaN Power.</h2>
+                        <p class="shopee-slide-desc">Intelligent wattage distribution and aerospace-grade thermal efficiency for your entire setup.</p>
                         <a href="<?= base_url('index.php?cat=chargers-cables#catalog') ?>" class="shopee-slide-btn">
-                            Shop Deals &rarr;
+                            Explore GaN &rarr;
                         </a>
                     </div>
                 </div>
@@ -206,9 +206,9 @@ require_once __DIR__ . '/_head.php';
                 <!-- Slide 2 -->
                 <div class="shopee-slide shopee-slide-2">
                     <div class="shopee-slide-content">
-                        <span class="shopee-slide-badge">⌨️ MECHANICAL KEYBOARDS EXPO</span>
-                        <h2 class="shopee-slide-title">Custom Aluminum Kits & Hot-Swap Switches</h2>
-                        <p class="shopee-slide-desc">Premium gasket-mounted tactile typing experience tailored for developers and gaming enthusiasts.</p>
+                        <span class="shopee-slide-badge">KeyPro Q1 &bull; Precision Craft</span>
+                        <h2 class="shopee-slide-title">CNC Aluminum. Tactile Bliss.</h2>
+                        <p class="shopee-slide-desc">Gasket-mounted acoustics, hot-swappable mechanical switches, and seamless multi-device Bluetooth.</p>
                         <a href="<?= base_url('index.php?cat=keyboards#catalog') ?>" class="shopee-slide-btn">
                             Explore Keyboards &rarr;
                         </a>
@@ -218,11 +218,11 @@ require_once __DIR__ . '/_head.php';
                 <!-- Slide 3 -->
                 <div class="shopee-slide shopee-slide-3">
                     <div class="shopee-slide-content">
-                        <span class="shopee-slide-badge">🎧 AUDIOPHILE & ANC ESSENTIALS</span>
-                        <h2 class="shopee-slide-title">Immersive Active Noise Cancellation</h2>
-                        <p class="shopee-slide-desc">Lossless LDAC wireless audio, 40-hour ultra-long battery life, and crystal-clear voice ENC.</p>
+                        <span class="shopee-slide-badge">PureTone ANC &bull; Spatial Audio</span>
+                        <h2 class="shopee-slide-title">Studio Acoustics. Pure Sound.</h2>
+                        <p class="shopee-slide-desc">Active noise cancellation, adaptive transparency, custom dynamic drivers, and 40-hour battery life.</p>
                         <a href="<?= base_url('index.php?cat=audio#catalog') ?>" class="shopee-slide-btn">
-                            Discover Audio &rarr;
+                            Explore Audio &rarr;
                         </a>
                     </div>
                 </div>
@@ -239,63 +239,63 @@ require_once __DIR__ . '/_head.php';
                 </div>
             </div>
 
-            <!-- Right: Shopee-Style Side Mini Promos -->
+            <!-- Right: Apple Card & Authentic Tech Promos -->
             <div class="shopee-side-promos">
                 <a href="#vouchers" class="shopee-promo-card shopee-promo-1">
-                    <span class="shopee-promo-badge">🎟️ Daily Vouchers</span>
-                    <div class="shopee-promo-title">Collect Platform Vouchers</div>
-                    <div class="shopee-promo-sub">Up to RM80 OFF on your tech upgrades!</div>
+                    <span class="shopee-promo-badge">Platform Pass</span>
+                    <div class="shopee-promo-title">Member Platform Passes</div>
+                    <div class="shopee-promo-sub">Up to RM80 OFF applied automatically at checkout</div>
                 </a>
                 <a href="#catalog" class="shopee-promo-card shopee-promo-2">
-                    <span class="shopee-promo-badge">🛡️ Official Mall</span>
-                    <div class="shopee-promo-title">100% Authentic Guarantee</div>
-                    <div class="shopee-promo-sub">15 Days Free Return &bull; Verified Tech</div>
+                    <span class="shopee-promo-badge">Apple Standard</span>
+                    <div class="shopee-promo-title">100% Genuine Guarantee</div>
+                    <div class="shopee-promo-sub">2-Year Official Warranty &bull; 15-Day Free Returns</div>
                 </a>
             </div>
         </section>
 
         <!-- ==================================================================
-             2. SHOPEE 4-POINT TRUST & BENEFITS STRIP
+             2. APPLE 4-POINT TRUST & BENEFITS STRIP
              ================================================================== -->
         <section class="shopee-trust-strip">
             <div class="shopee-trust-item">
-                <span class="trust-icon">🚚</span>
+                <span class="trust-icon">📦</span>
                 <div class="trust-text">
-                    <div class="trust-title">Free Shipping</div>
-                    <div class="trust-desc">Min. spend RM15 across Malaysia</div>
+                    <div class="trust-title">Free Delivery</div>
+                    <div class="trust-desc">On eligible orders across Malaysia</div>
                 </div>
             </div>
             <div class="shopee-trust-item">
                 <span class="trust-icon">🛡️</span>
                 <div class="trust-text">
-                    <div class="trust-title">100% Authentic Tech</div>
-                    <div class="trust-desc">Official 2-Year Manufacturer Warranty</div>
+                    <div class="trust-title">Official Warranty</div>
+                    <div class="trust-desc">2-Year manufacturer guarantee</div>
                 </div>
             </div>
             <div class="shopee-trust-item">
                 <span class="trust-icon">🔄</span>
                 <div class="trust-text">
-                    <div class="trust-title">15 Days Free Return</div>
-                    <div class="trust-desc">Zero-hassle refund & satisfaction guarantee</div>
+                    <div class="trust-title">15-Day Free Returns</div>
+                    <div class="trust-desc">Zero-hassle satisfaction guarantee</div>
                 </div>
             </div>
             <div class="shopee-trust-item">
                 <span class="trust-icon">⚡</span>
                 <div class="trust-text">
-                    <div class="trust-title">Same-Day Dispatch</div>
+                    <div class="trust-title">Priority Dispatch</div>
                     <div class="trust-desc">Orders placed before 2 PM ship today</div>
                 </div>
             </div>
         </section>
 
         <!-- ==================================================================
-             3. SHOPEE FLASH DEALS / SHOCKING SALE SECTION
+             3. SPECIAL EVENT OFFERS & LIMITED DEALS
              ================================================================== -->
         <?php if (!empty($flash_deals)): ?>
             <section class="shopee-flash-section">
                 <div class="shopee-flash-header">
                     <div class="flash-title-wrap">
-                        <span class="flash-title"><span>⚡</span> FLASH SALE</span>
+                        <span class="flash-title"><span>⚡</span> Special Event Offers</span>
                         <div class="flash-countdown">
                             <span>Ends in</span>
                             <span class="countdown-box" id="cd-hours">02</span>
@@ -324,7 +324,6 @@ require_once __DIR__ . '/_head.php';
                             </div>
                             <div class="flash-stock-track">
                                 <div class="flash-stock-fill" style="width: <?= min(90, (int)$fd->units_sold * 4 + 30) ?>%;"></div>
-                                <span class="flash-stock-text">🔥 <?= (int)$fd->units_sold ?> SOLD</span>
                             </div>
                         </a>
                     <?php endforeach; ?>
@@ -333,15 +332,15 @@ require_once __DIR__ . '/_head.php';
         <?php endif; ?>
 
         <!-- ==================================================================
-             4. SHOPEE CLAIMABLE DISCOUNT VOUCHERS SECTION
+             4. APPLE WALLET PLATFORM PASSES & VOUCHERS
              ================================================================== -->
         <?php if (!empty($active_vouchers)): ?>
             <section class="shopee-voucher-section" id="vouchers">
                 <div class="shopee-voucher-header">
                     <h2 class="voucher-section-title">
-                        <span>🎟️</span> Platform Vouchers &bull; Claim & Save
+                        <span>🎟️</span> Platform Passes & Vouchers
                     </h2>
-                    <span style="font-size:12px; color:var(--gray);">One-click claim &bull; Auto-applied at checkout</span>
+                    <span style="font-size:12px; color:var(--gray);">Instant one-click claim &bull; Auto-applied at checkout</span>
                 </div>
                 <div class="shopee-voucher-grid">
                     <?php foreach ($active_vouchers as $v): ?>
@@ -366,13 +365,13 @@ require_once __DIR__ . '/_head.php';
     <?php endif; ?>
 
     <!-- ==================================================================
-         5. SHOPEE CATEGORY TABS & HORIZONTAL SCROLL LIST
+         5. STORE CATEGORIES & SEGMENTED CONTROLS
          ================================================================== -->
     <div class="mb-24">
         <div class="category-scroll-list">
             <a href="<?= base_url('index.php' . ($q !== '' ? '?q=' . urlencode($q) : '') . '#catalog') ?>" 
                class="btn <?= empty($cat_slug) ? 'btn-primary-sm' : 'btn-outline-sm' ?>">
-               🌟 All Categories
+               All Products
             </a>
             <?php foreach ($categories as $cat): ?>
                 <?php
@@ -492,7 +491,7 @@ require_once __DIR__ . '/_head.php';
     <div class="section-title-wrap mb-20">
         <div>
             <h2 class="section-title">
-                <?= $current_category ? encode($current_category->name) : 'Daily Discover & All Products' ?>
+                <?= $current_category ? encode($current_category->name) : 'Explore the Collection' ?>
                 <?php if ($q !== ''): ?>
                     <span class="catalog-match-query"> &mdash; matching "<em><?= encode($q) ?></em>"</span>
                 <?php endif; ?>

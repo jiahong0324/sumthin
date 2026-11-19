@@ -19,11 +19,15 @@ $(function() {
     var $chatInput  = $('#chat-message-input');
     var $charCount  = $('#chat-char-count');
     var $sendBtn    = $('#chat-send-btn');
+    var $chatWidget = $('#floating-chat-widget');
+    var $chatPill   = $('#floating-chat-pill');
+    var $floatBadge = $('#float-chat-badge');
 
     var memberId    = parseInt($chatBox.data('member-id') || 0, 10);
     var lastId      = parseInt($chatBox.data('last-id') || 0, 10);
     var pollTimer   = null;
     var isSending   = false;
+    var isAdminDesk = (window.location.pathname.indexOf('/admin/') !== -1);
 
     // ------------------------------------------------------------------------
     // 1. Auto-scroll Helper
@@ -73,18 +77,25 @@ $(function() {
     }
 
     // ------------------------------------------------------------------------
-    // 3. Update Navbar & Sidebar Unread Badges
+    // 3. Update Navbar, Floating Pill & Sidebar Unread Badges
     // ------------------------------------------------------------------------
     function updateUnreadBadges(unreadCount, conversations) {
         var $adminBadge  = $('#admin-chat-badge');
         var $memberBadge = $('#member-chat-badge');
+        var isChatOpen   = ($chatWidget.length === 0) || $chatWidget.is(':visible');
 
         if (unreadCount > 0) {
             $adminBadge.text(unreadCount).show();
             $memberBadge.text(unreadCount).show();
+            if (!isChatOpen) {
+                $floatBadge.text(unreadCount).show();
+            } else {
+                $floatBadge.hide();
+            }
         } else {
             $adminBadge.hide();
             $memberBadge.hide();
+            $floatBadge.hide();
         }
 
         // Update admin conversation list unread badges if provided
@@ -118,13 +129,20 @@ $(function() {
             return;
         }
 
+        if (memberId <= 0 && !isAdminDesk) {
+            return;
+        }
+
+        var isChatOpen = ($chatWidget.length === 0) || $chatWidget.is(':visible');
+
         $.ajax({
             url: (window.location.origin || '') + '/sumthin/ajax/chat_poll.php',
             type: 'GET',
             dataType: 'json',
             data: {
                 after_id: lastId,
-                member_id: memberId
+                member_id: memberId,
+                mark_read: isChatOpen ? 1 : 0
             },
             success: function(res) {
                 if (res.ok) {
@@ -142,7 +160,9 @@ $(function() {
 
                         if (hasNew) {
                             $chatBox.data('last-id', lastId);
-                            scrollToBottom(true);
+                            if (isChatOpen) {
+                                scrollToBottom(true);
+                            }
                         }
                     }
                 }
@@ -150,27 +170,104 @@ $(function() {
         });
     }
 
-    // Start 3-second polling interval
-    pollTimer = setInterval(pollMessages, 3000);
+    // Start 3-second polling interval if authorized
+    if (memberId > 0 || isAdminDesk) {
+        pollTimer = setInterval(pollMessages, 3000);
+    }
 
     // ------------------------------------------------------------------------
     // 5. Visibility Change Listener (Pause when hidden, resume when visible)
     // ------------------------------------------------------------------------
     document.addEventListener('visibilitychange', function() {
         if (document.visibilityState === 'visible') {
-            // Immediate check upon returning to tab
-            pollMessages();
-            if (!pollTimer) {
-                pollTimer = setInterval(pollMessages, 3000);
+            if (memberId > 0 || isAdminDesk) {
+                pollMessages();
+                if (!pollTimer) {
+                    pollTimer = setInterval(pollMessages, 3000);
+                }
             }
         } else {
-            clearInterval(pollTimer);
-            pollTimer = null;
+            if (pollTimer) {
+                clearInterval(pollTimer);
+                pollTimer = null;
+            }
         }
     });
 
     // ------------------------------------------------------------------------
-    // 6. Character Counter
+    // 6. On-Page Floating Chat Launcher & Widget Controller (No Page Jump)
+    // ------------------------------------------------------------------------
+    $(document).on('click', '#floating-chat-pill', function(e) {
+        e.preventDefault();
+        if (!$chatWidget.length) return;
+
+        if ($chatWidget.is(':visible')) {
+            $chatWidget.fadeOut(180);
+            $chatPill.removeClass('active');
+            sessionStorage.removeItem('sumthin_chat_open');
+        } else {
+            $chatWidget.fadeIn(180, function() {
+                scrollToBottom(false);
+                $chatInput.focus();
+            });
+            $chatPill.addClass('active');
+            $floatBadge.hide();
+            sessionStorage.setItem('sumthin_chat_open', '1');
+            if (memberId > 0) {
+                pollMessages();
+            }
+        }
+    });
+
+    $(document).on('click', '#floating-chat-close', function(e) {
+        e.preventDefault();
+        if ($chatWidget.length) {
+            $chatWidget.fadeOut(180);
+            $chatPill.removeClass('active');
+            sessionStorage.removeItem('sumthin_chat_open');
+        }
+    });
+
+    // Close on Escape key press
+    $(document).on('keydown', function(e) {
+        if (e.key === 'Escape' && $chatWidget.length && $chatWidget.is(':visible')) {
+            $chatWidget.fadeOut(180);
+            $chatPill.removeClass('active');
+            sessionStorage.removeItem('sumthin_chat_open');
+        }
+    });
+
+    // Restore chat open state across pages if previously open
+    if (sessionStorage.getItem('sumthin_chat_open') === '1' && $chatWidget.length > 0) {
+        $chatWidget.show();
+        $chatPill.addClass('active');
+        $floatBadge.hide();
+        scrollToBottom(false);
+    }
+
+    // Top navbar "Support Chat" link: open widget on same page if widget exists
+    $(document).on('click', '#member-chat-nav', function(e) {
+        if ($chatWidget.length > 0) {
+            e.preventDefault();
+            if (!$chatWidget.is(':visible')) {
+                $chatWidget.fadeIn(180, function() {
+                    scrollToBottom(false);
+                    $chatInput.focus();
+                });
+                $chatPill.addClass('active');
+                $floatBadge.hide();
+                sessionStorage.setItem('sumthin_chat_open', '1');
+                if (memberId > 0) {
+                    pollMessages();
+                }
+            } else {
+                $chatInput.focus();
+            }
+        }
+    });
+
+    // ------------------------------------------------------------------------
+    // 7. Character Counter
     // ------------------------------------------------------------------------
     $chatInput.on('input', function() {
         var len = $(this).val().length;
@@ -185,7 +282,7 @@ $(function() {
     });
 
     // ------------------------------------------------------------------------
-    // 7. Send Message Form Submit
+    // 8. Send Message Form Submit
     // ------------------------------------------------------------------------
     $chatForm.on('submit', function(e) {
         e.preventDefault();

@@ -44,26 +44,26 @@ $user         = current_user();
             <a href="<?= base_url('index.php') ?>" class="brand-logo">
                 <span class="brand-badge"><?= strtoupper(substr($store_name, 0, 1)) ?></span>
                 <span class="brand-text"><?= encode($store_name) ?><span class="brand-dot">.</span></span>
-                <span class="shopee-mall-tag">Mall</span>
+                <span class="shopee-mall-tag">Store</span>
             </a>
 
             <?php if (!str_contains($_SERVER['REQUEST_URI'], '/admin/')): ?>
-                <!-- Central Shopee Search Bar with Instant Autocomplete -->
+                <!-- Central Apple Pill Search Bar with Instant Autocomplete -->
                 <div class="header-search-wrap">
                     <form action="<?= base_url('index.php') ?>#catalog" method="GET" class="header-search-form">
                         <input type="text" name="q" id="header-search-q" class="header-search-input" 
-                               placeholder="Search authentic tech gadgets, GaN chargers, keyboards..." 
+                               placeholder="Search products, GaN chargers, keyboards, audio..." 
                                value="<?= encode($_GET['q'] ?? '') ?>" autocomplete="off">
                         <button type="submit" class="header-search-btn" aria-label="Search">
                             <span>🔍</span> Search
                         </button>
                     </form>
                     <div class="header-hot-tags">
-                        <a href="<?= base_url('index.php?q=GaN#catalog') ?>" class="hot-tag">⚡ GaN Chargers</a>
-                        <a href="<?= base_url('index.php?cat=keyboards#catalog') ?>" class="hot-tag">⌨️ Keyboards</a>
-                        <a href="<?= base_url('index.php?cat=power-banks#catalog') ?>" class="hot-tag">🔋 Power Banks</a>
-                        <a href="<?= base_url('index.php?cat=mice#catalog') ?>" class="hot-tag">🖱️ Mice</a>
-                        <a href="<?= base_url('index.php?cat=audio#catalog') ?>" class="hot-tag">🎧 Audio</a>
+                        <a href="<?= base_url('index.php?q=GaN#catalog') ?>" class="hot-tag">GaN Fast Chargers</a>
+                        <a href="<?= base_url('index.php?cat=keyboards#catalog') ?>" class="hot-tag">Mechanical Keyboards</a>
+                        <a href="<?= base_url('index.php?cat=power-banks#catalog') ?>" class="hot-tag">Power Banks</a>
+                        <a href="<?= base_url('index.php?cat=mice#catalog') ?>" class="hot-tag">Precision Mice</a>
+                        <a href="<?= base_url('index.php?cat=audio#catalog') ?>" class="hot-tag">Spatial Audio</a>
                     </div>
                 </div>
             <?php endif; ?>

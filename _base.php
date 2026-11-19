@@ -261,7 +261,7 @@ function captcha_widget(): string {
         $script_loaded = true;
     }
 
-    return $script . '<div class="cf-turnstile my-14" data-sitekey="' . encode($site_key) . '"></div>';
+    return $script . '<div class="cf-turnstile my-14" data-sitekey="' . encode($site_key) . '" data-theme="auto"></div>';
 }
 
 /**
