@@ -78,6 +78,7 @@ json_response([
         'member_id'      => $member_id,
         'sender_role'    => $sender_role,
         'message'        => $message,
+        'is_me'          => true,
         'created_at'     => date('Y-m-d H:i:s'),
         'time_formatted' => date('h:i A')
     ]

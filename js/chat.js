@@ -54,13 +54,29 @@ $(function() {
             return; // Already in DOM
         }
 
+        // Determine whether message was sent by the currently viewed session user
+        var isMe = false;
+        if (typeof msg.is_me !== 'undefined') {
+            isMe = Boolean(msg.is_me);
+        } else {
+            // Robust fallback: On admin desk, Admin is me; otherwise Member is me
+            isMe = isAdminDesk ? (msg.sender_role === 'Admin') : (msg.sender_role === 'Member');
+        }
+
         var $row = $('<div class="chat-bubble-row"></div>')
-            .addClass(msg.is_me ? 'me' : 'them')
+            .addClass(isMe ? 'me' : 'them')
             .attr('data-msg-id', msg.id);
 
         var senderLabel = 'You';
-        if (!msg.is_me) {
-            senderLabel = (msg.sender_role === 'Admin') ? 'sumthin Support' : 'Customer';
+        if (!isMe) {
+            if (isAdminDesk) {
+                var memberName = $('.chat-header-title').text().trim() || 'Customer';
+                senderLabel = (msg.sender_role === 'Admin') ? 'Support Staff' : memberName;
+            } else {
+                senderLabel = (msg.sender_role === 'Admin') ? 'sumthin Support' : 'Customer';
+            }
+        } else {
+            senderLabel = isAdminDesk ? 'Support Staff (You)' : 'You';
         }
 
         var $sender = $('<span class="chat-sender-name"></span>').text(senderLabel);

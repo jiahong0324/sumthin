@@ -23,6 +23,7 @@ return [
         'tagline'         => 'Curated Tech Gadgets & Daily Essentials',
         'url'             => 'http://localhost/sumthin',
         'base_url'        => '/sumthin', // Project folder inside htdocs
+        'timezone'        => 'Asia/Kuala_Lumpur',
         'session_timeout' => 1800,       // 30 minutes in seconds
         'max_login_fails' => 3,          // Lock account after 3 failed attempts
         'lockout_time'    => 900,        // Lock duration: 15 minutes (in seconds)

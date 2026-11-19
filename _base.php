@@ -16,6 +16,7 @@ if (file_exists(__DIR__ . '/_config.local.php')) {
         $config = array_replace_recursive($config, $local_config);
     }
 }
+date_default_timezone_set($config['app']['timezone'] ?? 'Asia/Kuala_Lumpur');
 require_once __DIR__ . '/_mail.php';
 
 // 2. Start Secure Session with configuration
@@ -64,6 +65,9 @@ try {
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_OBJ,
         PDO::ATTR_EMULATE_PREPARES   => false,
     ]);
+    try {
+        $db->exec("SET time_zone = '+08:00'");
+    } catch (PDOException $ignored) {}
 } catch (PDOException $e) {
     // Graceful error display without revealing credentials
     $debug_info = '';
