@@ -61,10 +61,10 @@ return [
         'site'    => 'datadoghq.com',
     ],
 
-    // Cloudflare Turnstile Captcha (Configured with official Always-Pass test keys for development/evaluation)
+    // Cloudflare Turnstile Captcha (Configured with production keys for localhost)
     'captcha' => [
         'enabled'    => true,
-        'site_key'   => '1x00000000000000000000AA',
-        'secret_key' => '1x0000000000000000000000000000000AA',
+        'site_key'   => '0x4AAAAAAGIxyeZU0-mr1hqm',
+        'secret_key' => '0x4AAAAAAGIxyXdvJAIvUlGjp7B4UCSTiUA',
     ],
 ];
