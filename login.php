@@ -59,7 +59,7 @@ if (is_post()) {
                 // Check if Member email is verified (Admins are exempt)
                 if ($user->role === 'Member' && empty($user->email_verified_at)) {
                     $resend_url = base_url('resend_verification.php?email=' . urlencode($user->email));
-                    $errors['auth'] = 'Please verify your email first. <a href="' . encode($resend_url) . '" class="form-link" style="text-decoration:underline; font-weight:700;">Resend verification email</a>';
+                    $errors['auth'] = 'Please verify your email first. <a href="' . encode($resend_url) . '" class="form-link text-underline fw-700">Resend verification email</a>';
                 } else {
                     // Successful Login:
                     // a. Prevent session fixation

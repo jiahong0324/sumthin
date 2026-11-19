@@ -2109,6 +2109,7 @@ body.dark-theme .cart-item-row {
 .gap-28  { gap: 28px; }
 
 /* Font Size Utilities */
+.text-underline { text-decoration: underline; }
 .fs-11   { font-size: 11px; }
 .fs-12   { font-size: 12px; }
 .fs-13   { font-size: 13px; }
