@@ -15,6 +15,7 @@ $user         = current_user();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="<?= csrf_token() ?>">
     <title><?= $page_title ?></title>
     <!-- Prevent theme flickering on reload -->
     <script>
@@ -53,8 +54,10 @@ $user         = current_user();
                     <!-- Admin specific navigation -->
                     <?php
                     $nav_low_stock = 0;
+                    $nav_admin_unread_chat = 0;
                     try {
                         $nav_low_stock = (int)$db->query("SELECT COUNT(*) FROM `product` WHERE `stock` <= `low_stock_threshold`")->fetchColumn();
+                        $nav_admin_unread_chat = (int)$db->query("SELECT COUNT(*) FROM `chat_message` WHERE `sender_role` = 'Member' AND `is_read` = 0")->fetchColumn();
                     } catch (Exception $e) {}
                     ?>
                     <span class="nav-badge admin-badge">Admin</span>
@@ -63,14 +66,30 @@ $user         = current_user();
                         Products<?php if ($nav_low_stock > 0): ?><span class="badge-low-stock" title="<?= $nav_low_stock ?> product(s) low on inventory"><?= $nav_low_stock ?></span><?php endif; ?>
                     </a>
                     <a href="<?= base_url('admin/categories.php') ?>" class="nav-link <?= str_contains($_SERVER['REQUEST_URI'], '/admin/categor') ? 'active' : '' ?>">Categories</a>
+                    <a href="<?= base_url('admin/vouchers.php') ?>" class="nav-link <?= str_contains($_SERVER['REQUEST_URI'], '/admin/voucher') ? 'active' : '' ?>">Vouchers</a>
                     <a href="<?= base_url('admin/members.php') ?>" class="nav-link <?= str_contains($_SERVER['REQUEST_URI'], '/admin/member') ? 'active' : '' ?>">Members</a>
+                    <a href="<?= base_url('admin/admins.php') ?>" class="nav-link <?= str_contains($_SERVER['REQUEST_URI'], '/admin/admin') ? 'active' : '' ?>">Admins</a>
                     <a href="<?= base_url('admin/orders.php') ?>" class="nav-link <?= str_contains($_SERVER['REQUEST_URI'], '/admin/order') ? 'active' : '' ?>">Orders</a>
                     <a href="<?= base_url('admin/email_send.php') ?>" class="nav-link <?= str_contains($_SERVER['REQUEST_URI'], '/admin/email') ? 'active' : '' ?>">Email</a>
+                    <a href="<?= base_url('admin/chat.php') ?>" class="nav-link <?= str_contains($_SERVER['REQUEST_URI'], '/admin/chat') ? 'active' : '' ?>">
+                        Chat<span class="badge-unread-chat" id="admin-chat-badge" style="<?= $nav_admin_unread_chat > 0 ? '' : 'display:none;' ?>"><?= $nav_admin_unread_chat ?></span>
+                    </a>
                     <a href="<?= base_url('admin/settings.php') ?>" class="nav-link <?= str_contains($_SERVER['REQUEST_URI'], '/admin/setting') ? 'active' : '' ?>">Settings</a>
                 <?php elseif (is_member()): ?>
                     <!-- Member specific navigation -->
+                    <?php
+                    $nav_member_unread_chat = 0;
+                    try {
+                        $c_stmt = $db->prepare("SELECT COUNT(*) FROM `chat_message` WHERE `member_id` = ? AND `sender_role` = 'Admin' AND `is_read` = 0");
+                        $c_stmt->execute([$user->id]);
+                        $nav_member_unread_chat = (int)$c_stmt->fetchColumn();
+                    } catch (Exception $e) {}
+                    ?>
                     <a href="<?= base_url('orders.php') ?>" class="nav-link <?= $current_page === 'orders.php' ? 'active' : '' ?>">My Orders</a>
                     <a href="<?= base_url('wishlist.php') ?>" class="nav-link <?= $current_page === 'wishlist.php' ? 'active' : '' ?>">Wishlist</a>
+                    <a href="<?= base_url('chat.php') ?>" class="nav-link <?= $current_page === 'chat.php' ? 'active' : '' ?>" id="member-chat-nav">
+                        Support Chat<span class="badge-unread-chat" id="member-chat-badge" style="<?= $nav_member_unread_chat > 0 ? '' : 'display:none;' ?>"><?= $nav_member_unread_chat ?></span>
+                    </a>
                 <?php endif; ?>
             </nav>
 

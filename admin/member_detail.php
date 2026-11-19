@@ -56,6 +56,9 @@ require_once __DIR__ . '/../_head.php';
             <span class="fs-13 text-muted"><?= encode($m->email) ?></span>
         </div>
         <div class="d-flex gap-8 items-center">
+            <a href="<?= base_url('admin/member_edit.php?id=' . (int)$m->id) ?>" class="btn btn-outline-sm">
+                ✏ Edit Member
+            </a>
             <a href="<?= base_url('admin/email_send.php?member_id=' . (int)$m->id) ?>" class="btn btn-primary-sm">
                 ✉ Send Email
             </a>
@@ -154,11 +157,12 @@ require_once __DIR__ . '/../_head.php';
                         <th>Total Amount</th>
                         <th>Order Status</th>
                         <th>Payment Status</th>
+                        <th style="text-align:right;">Action</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if (empty($orders)): ?>
-                        <tr><td colspan="6" class="table-empty-cell">No orders placed yet.</td></tr>
+                        <tr><td colspan="7" class="table-empty-cell">No orders placed yet.</td></tr>
                     <?php else: ?>
                         <?php foreach ($orders as $ord): ?>
                             <tr>
@@ -171,6 +175,11 @@ require_once __DIR__ . '/../_head.php';
                                 </td>
                                 <td>
                                     <span class="role-pill badge-stock-healthy fs-11"><?= encode($ord->payment_status) ?></span>
+                                </td>
+                                <td style="text-align:right;">
+                                    <a href="<?= base_url('admin/order_detail.php?id=' . (int)$ord->id) ?>" class="btn btn-outline-sm">
+                                        View Order
+                                    </a>
                                 </td>
                             </tr>
                         <?php endforeach; ?>

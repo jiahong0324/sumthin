@@ -32,6 +32,17 @@ if (is_post()) {
             $del = $db->prepare('DELETE FROM `wishlist` WHERE `user_id` = ? AND `product_id` = ?');
             $del->execute([$user_id, $product_id]);
             set_flash('info', 'Item removed from your wishlist.');
+        } elseif ($action === 'toggle') {
+            $chk = $db->prepare('SELECT id FROM `wishlist` WHERE `user_id` = ? AND `product_id` = ?');
+            $chk->execute([$user_id, $product_id]);
+            $w_id = $chk->fetchColumn();
+            if ($w_id) {
+                $db->prepare('DELETE FROM `wishlist` WHERE id = ?')->execute([$w_id]);
+                set_flash('info', 'Item removed from your wishlist.');
+            } else {
+                $db->prepare('INSERT INTO `wishlist` (`user_id`, `product_id`) VALUES (?, ?)')->execute([$user_id, $product_id]);
+                set_flash('success', 'Gadget saved to your wishlist!');
+            }
         }
     }
 

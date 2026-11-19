@@ -137,7 +137,7 @@ require_once __DIR__ . '/_head.php';
 
                 <div class="cart-items-list">
                     <?php foreach ($cart_items as $item): ?>
-                        <div class="cart-item-row">
+                        <div class="cart-item-row" id="cart-item-<?= (int)$item->cart_id ?>" data-cart-id="<?= (int)$item->cart_id ?>">
                             <!-- Photo -->
                             <div class="cart-item-thumb">
                                 <img src="<?= base_url('uploads/products/' . encode($item->photo_url)) ?>" alt="<?= encode($item->name) ?>" class="cart-item-img">
@@ -169,7 +169,7 @@ require_once __DIR__ . '/_head.php';
 
                             <!-- Subtotal & Remove -->
                             <div class="cart-item-subtotal-col">
-                                <div class="cart-item-subtotal">
+                                <div class="cart-item-subtotal" id="line-subtotal-<?= (int)$item->cart_id ?>">
                                     RM <?= number_format((float)($item->price * $item->quantity), 2) ?>
                                 </div>
                                 <form action="<?= base_url('cart_action.php') ?>" method="POST" class="mt-6">
@@ -225,13 +225,13 @@ require_once __DIR__ . '/_head.php';
                 <div class="cart-breakdown-list">
                     <div class="flex-between">
                         <span class="text-muted">Items Subtotal:</span>
-                        <strong>RM <?= number_format((float)$subtotal, 2) ?></strong>
+                        <strong id="cart-summary-subtotal">RM <?= number_format((float)$subtotal, 2) ?></strong>
                     </div>
 
                     <?php if ($discount_amount > 0): ?>
                         <div class="flex-between text-success">
                             <span>Voucher Savings:</span>
-                            <strong>- RM <?= number_format((float)$discount_amount, 2) ?></strong>
+                            <strong id="cart-summary-discount">- RM <?= number_format((float)$discount_amount, 2) ?></strong>
                         </div>
                     <?php endif; ?>
 
@@ -248,7 +248,7 @@ require_once __DIR__ . '/_head.php';
                 <!-- Grand Total -->
                 <div class="cart-total-row">
                     <span class="cart-total-label">Estimated Total:</span>
-                    <span class="cart-total-val">
+                    <span class="cart-total-val" id="cart-summary-total">
                         RM <?= number_format((float)$final_total, 2) ?>
                     </span>
                 </div>

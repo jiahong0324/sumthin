@@ -332,6 +332,14 @@ require_once __DIR__ . '/_head.php';
                         </div>
 
                         <div class="product-card-actions">
+                            <form action="<?= base_url('wishlist.php') ?>" method="POST" class="d-inline">
+                                <?= csrf_field() ?>
+                                <input type="hidden" name="action" value="toggle">
+                                <input type="hidden" name="product_id" value="<?= (int)$p->id ?>">
+                                <button type="submit" class="btn btn-outline-sm btn-card-action" title="Save to Wishlist" style="padding:6px 10px;">
+                                    <span class="card-heart-icon">♡</span>
+                                </button>
+                            </form>
                             <a href="<?= base_url('product.php?id=' . (int)$p->id) ?>" class="btn btn-outline-sm btn-card-action">
                                 Details
                             </a>

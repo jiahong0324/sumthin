@@ -190,6 +190,9 @@ require_once __DIR__ . '/../_head.php';
                                     <a href="<?= base_url('admin/member_detail.php?id=' . (int)$m->id) ?>" class="btn btn-outline-sm">
                                         View Details
                                     </a>
+                                    <a href="<?= base_url('admin/member_edit.php?id=' . (int)$m->id) ?>" class="btn btn-outline-sm">
+                                        Edit
+                                    </a>
                                     <form action="<?= base_url('admin/member_toggle_status.php') ?>" method="POST" class="d-inline">
                                         <?= csrf_field() ?>
                                         <input type="hidden" name="id" value="<?= (int)$m->id ?>">

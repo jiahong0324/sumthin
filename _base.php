@@ -205,13 +205,18 @@ function csrf_field(): string {
 }
 
 /**
- * Verify submitted CSRF token on POST requests
+ * Verify submitted CSRF token on POST requests (Supports POST body and X-CSRF-Token header)
  */
 function verify_csrf(): void {
     if (is_post()) {
-        $token = $_POST['csrf_token'] ?? '';
+        $token = $_POST['csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
         if (empty($token) || !hash_equals($_SESSION['csrf_token'] ?? '', $token)) {
             http_response_code(403);
+            if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest' || str_starts_with($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json')) {
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['ok' => false, 'message' => '403 Forbidden: Invalid or expired CSRF token.']);
+                exit;
+            }
             global $config;
             $css_link = (!empty($config['app']['base_url']) ? rtrim($config['app']['base_url'], '/') : '') . '/css/app.css';
             die('<!DOCTYPE html><html><head><meta charset="utf-8"><title>403 Forbidden</title><link rel="stylesheet" href="' . htmlspecialchars($css_link) . '"></head><body>'
@@ -219,6 +224,16 @@ function verify_csrf(): void {
                 . '</body></html>');
         }
     }
+}
+
+/**
+ * Send a structured JSON response with proper HTTP status code and terminate
+ */
+function json_response(array $data, int $status = 200): void {
+    http_response_code($status);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode($data);
+    exit;
 }
 
 // ============================================================================

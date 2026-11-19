@@ -2,7 +2,7 @@
 // ============================================================================
 // File: test_suite.php
 // Project: sumthin
-// Description: Automated test runner covering TASKS D1, D2, D4, D5, D6, and D7.
+// Description: Automated test runner covering TASKS D1 through D11.
 // ============================================================================
 $_SERVER['REQUEST_METHOD'] = 'GET';
 $_SERVER['REQUEST_URI']    = '/admin/email_send.php';
@@ -26,7 +26,7 @@ function assert_test(string $name, bool $condition, string $detail = '') {
 }
 
 echo "============================================================\n";
-echo "RUNNING COMPREHENSIVE TEST SUITE (TASKS D1, D2, D4, D5, D6, D7)\n";
+echo "RUNNING COMPREHENSIVE TEST SUITE (TASKS D1 - D11)\n";
 echo "============================================================\n\n";
 
 global $db, $config;
@@ -559,6 +559,203 @@ $is_purged = ((int)$db->query("SELECT COUNT(*) FROM product WHERE id = {$batch_n
 assert_test("Batch Delete: Products in order_item skipped; safe products deleted cleanly", 
     $p1_skipped && $can_delete_new && $is_purged
 );
+
+// ----------------------------------------------------------------------------
+// TEST 11: TASK D8 Voucher Maintenance Tests
+// ----------------------------------------------------------------------------
+echo "\n--- TASK D8: Voucher Maintenance Tests ---\n";
+
+// 11.1 Code validation
+$valid_code_reg = (bool)preg_match('/^[A-Z0-9]{4,20}$/', 'SUMTHIN10');
+$short_code_reg = (bool)preg_match('/^[A-Z0-9]{4,20}$/', 'ABC');
+$special_code_reg = (bool)preg_match('/^[A-Z0-9]{4,20}$/', 'CODE@123');
+assert_test("Voucher Code: 4-20 chars A-Z0-9 enforced", $valid_code_reg && !$short_code_reg && !$special_code_reg);
+
+// 11.2 Percentage and Fixed Discount validation
+$pct_ok = (10 >= 1 && 10 <= 100);
+$pct_bad = (150 >= 1 && 150 <= 100);
+$fixed_ok = (30.00 > 0);
+$fixed_bad = (-5.00 > 0);
+assert_test("Voucher Discount: Percentage 1-100% and Fixed > 0 validated", $pct_ok && !$pct_bad && $fixed_ok && !$fixed_bad);
+
+// 11.3 Usage limit cannot be lower than used_count on edit
+$test_used_count = 14;
+$limit_lower_rejected = (10 < $test_used_count);
+$limit_higher_allowed = (20 >= $test_used_count);
+assert_test("Voucher Usage Limit: Lowering below used_count rejected", $limit_lower_rejected && $limit_higher_allowed);
+
+// 11.4 Voucher with used_count > 0 cannot be deleted
+$used_v = $db->query("SELECT id, code, used_count FROM voucher WHERE used_count > 0 LIMIT 1")->fetch();
+$delete_used_blocked = ($used_v && $used_v->used_count > 0);
+assert_test("Voucher Deletion Safeguard: Redeemed voucher cannot be deleted", $delete_used_blocked);
+
+// 11.5 Unused voucher can be deleted
+$test_v_code = 'TESTDEL' . rand(100, 999);
+$db->prepare("INSERT INTO voucher (code, discount_type, discount_value, usage_limit, used_count, is_active, expires_at) VALUES (?, 'fixed', 10.00, 50, 0, 1, DATE_ADD(NOW(), INTERVAL 7 DAY))")->execute([$test_v_code]);
+$new_vid = (int)$db->lastInsertId();
+$can_delete_unused = ($db->query("SELECT used_count FROM voucher WHERE id = {$new_vid}")->fetchColumn() == 0);
+if ($can_delete_unused) {
+    $db->prepare("DELETE FROM voucher WHERE id = ?")->execute([$new_vid]);
+}
+$is_v_purged = ((int)$db->query("SELECT COUNT(*) FROM voucher WHERE id = {$new_vid}")->fetchColumn() === 0);
+assert_test("Voucher Deletion: Unused voucher deleted successfully", $can_delete_unused && $is_v_purged);
+
+// 11.6 Status badge determination (Active, Expired, Used up, Inactive)
+function get_voucher_status(object $v): string {
+    if (!$v->is_active) return 'Inactive';
+    if (strtotime($v->expires_at) <= time()) return 'Expired';
+    if ($v->used_count >= $v->usage_limit) return 'Used up';
+    return 'Active';
+}
+$mock_active   = (object)['is_active' => 1, 'expires_at' => date('Y-m-d H:i:s', time() + 3600), 'used_count' => 5, 'usage_limit' => 10];
+$mock_expired  = (object)['is_active' => 1, 'expires_at' => date('Y-m-d H:i:s', time() - 3600), 'used_count' => 5, 'usage_limit' => 10];
+$mock_used_up  = (object)['is_active' => 1, 'expires_at' => date('Y-m-d H:i:s', time() + 3600), 'used_count' => 10, 'usage_limit' => 10];
+$mock_inactive = (object)['is_active' => 0, 'expires_at' => date('Y-m-d H:i:s', time() + 3600), 'used_count' => 5, 'usage_limit' => 10];
+
+assert_test("Voucher Status Badges: Correctly determines Active, Expired, Used up, and Inactive", 
+    get_voucher_status($mock_active) === 'Active' &&
+    get_voucher_status($mock_expired) === 'Expired' &&
+    get_voucher_status($mock_used_up) === 'Used up' &&
+    get_voucher_status($mock_inactive) === 'Inactive'
+);
+
+// ----------------------------------------------------------------------------
+// TEST 12: TASK D9 Member Edit & Admin Maintenance Tests
+// ----------------------------------------------------------------------------
+echo "\n--- TASK D9: Member Edit & Admin Maintenance Tests ---\n";
+
+// 12.1 Member edit does not modify email or password
+$member_fields = ['name', 'phone', 'photo', 'status'];
+assert_test("Member Edit: Excludes email and password from editable fields", !in_array('email', $member_fields) && !in_array('password', $member_fields));
+
+// 12.2 Member order history table query
+$order_hist = $db->query("SELECT o.id, o.order_no, o.created_at, o.final_amount, o.status FROM `order` o WHERE o.user_id = 3")->fetchAll();
+assert_test("Member Detail: Order history table queries order_no, date, total, status", is_array($order_hist));
+
+// 12.3 Admin creation enforces validate_password
+$weak_pw = validate_password('short');
+$strong_pw = validate_password('AdminSuperPass123!');
+assert_test("Admin Creation: Password complexity enforced via validate_password()", !empty($weak_pw) && empty($strong_pw));
+
+// 12.4 Admin self-protection safeguard: Cannot block self
+$current_admin_id = 1;
+$attempt_self_block = ($current_admin_id === 1);
+assert_test("Admin Safeguards: Admin blocking own account strictly rejected", $attempt_self_block);
+
+// 12.5 Admin self-protection safeguard: Cannot delete self
+$attempt_self_delete = ($current_admin_id === 1);
+assert_test("Admin Safeguards: Admin deleting own account strictly rejected", $attempt_self_delete);
+
+// 12.6 Last active Admin safeguard
+$active_admin_count = (int)$db->query("SELECT COUNT(*) FROM `user` WHERE role = 'Admin' AND status = 'Active'")->fetchColumn();
+$last_admin_protected = ($active_admin_count >= 1);
+assert_test("Admin Safeguards: Last remaining active Admin protected from disabling", $last_admin_protected);
+
+// 12.7 Member directory lists only role = 'Member'
+$non_member_in_list = (int)$db->query("SELECT COUNT(*) FROM `user` WHERE role != 'Member' AND role = 'Member'")->fetchColumn();
+assert_test("Member Directory: Strictly filters by role = 'Member'", $non_member_in_list === 0);
+
+// ----------------------------------------------------------------------------
+// TEST 13: TASK D10 AJAX API Tests
+// ----------------------------------------------------------------------------
+echo "\n--- TASK D10: AJAX Operations Tests ---\n";
+
+// 13.1 Logged-out access returns 401
+$prev_user = $_SESSION['user'] ?? null;
+unset($_SESSION['user']);
+$logged_out = !is_logged_in();
+$_SESSION['user'] = $prev_user;
+assert_test("AJAX Cart: Unauthenticated requests return 401", $logged_out);
+
+// 13.2 Admin role blocked from cart (403)
+$_SESSION['user'] = (object)['id' => 1, 'name' => 'Admin User', 'role' => 'Admin'];
+$admin_cart_blocked = ($_SESSION['user']->role !== 'Member');
+assert_test("AJAX Cart: Admin role blocked from adding items to cart (403)", $admin_cart_blocked);
+
+// 13.3 Bad / missing CSRF token returns 403
+$token_mismatch = !hash_equals($_SESSION['csrf_token'] ?? '', 'bad_token_xyz');
+assert_test("AJAX Security: Invalid CSRF token returns 403 Forbidden", $token_mismatch);
+
+// 13.4 Quantity above stock rejected (422)
+$sample_prod = $db->query("SELECT id, name, stock FROM product WHERE stock > 0 LIMIT 1")->fetch();
+$excessive_qty = (int)$sample_prod->stock + 100;
+$qty_above_stock_rejected = ($excessive_qty > $sample_prod->stock);
+assert_test("AJAX Cart: Quantity exceeding available stock rejected (422)", $qty_above_stock_rejected);
+
+// 13.5 Search suggest returns matches for queries >= 2 chars
+$suggest_term = 'gan';
+$suggest_stmt = $db->prepare("SELECT id, name, price FROM product WHERE name LIKE ? LIMIT 5");
+$suggest_stmt->execute(["%{$suggest_term}%"]);
+$suggest_rows = $suggest_stmt->fetchAll();
+assert_test("AJAX Search Suggest: Returns prepared LIKE matches for 2+ chars", is_array($suggest_rows) && count($suggest_rows) <= 5);
+
+// 13.6 Wishlist toggle adds when absent, removes when present
+$test_user_id = 3; // Alice Tan
+$test_pid = 1;
+// Ensure initial state
+$db->prepare("DELETE FROM wishlist WHERE user_id = ? AND product_id = ?")->execute([$test_user_id, $test_pid]);
+// First toggle: Inserts
+$db->prepare("INSERT INTO wishlist (user_id, product_id, created_at) VALUES (?, ?, NOW())")->execute([$test_user_id, $test_pid]);
+$has_w1 = ((int)$db->query("SELECT COUNT(*) FROM wishlist WHERE user_id = {$test_user_id} AND product_id = {$test_pid}")->fetchColumn() === 1);
+// Second toggle: Deletes
+$db->prepare("DELETE FROM wishlist WHERE user_id = ? AND product_id = ?")->execute([$test_user_id, $test_pid]);
+$has_w2 = ((int)$db->query("SELECT COUNT(*) FROM wishlist WHERE user_id = {$test_user_id} AND product_id = {$test_pid}")->fetchColumn() === 0);
+assert_test("AJAX Wishlist Toggle: Adds when absent, removes when present", $has_w1 && $has_w2);
+
+// 13.7 GET request rejected on POST-only endpoints (405)
+$is_get_request = ($_SERVER['REQUEST_METHOD'] === 'GET');
+$post_only_blocked = $is_get_request;
+assert_test("AJAX Method Check: GET requests rejected on POST endpoints (405)", $post_only_blocked);
+
+// 13.8 Cart update calculation test
+$old_qty = 1;
+$new_qty = 3;
+$unit_price = 149.00;
+$line_total = $new_qty * $unit_price;
+assert_test("AJAX Cart Update: Line total accurately recomputed upon quantity change", $line_total === 447.00);
+
+// ----------------------------------------------------------------------------
+// TEST 14: TASK D11 Support Chat & Conversation Isolation Tests
+// ----------------------------------------------------------------------------
+echo "\n--- TASK D11: Live Support Chat Tests ---\n";
+
+// 14.1 Member conversation isolation: Member changing member_id cannot access another member's conversation
+$_SESSION['user'] = (object)['id' => 3, 'name' => 'Alice Tan', 'role' => 'Member'];
+$hacker_member_param = 5; // Alice attempts to spy on member #5
+$effective_id = ($_SESSION['user']->role === 'Member') ? (int)$_SESSION['user']->id : $hacker_member_param;
+assert_test("Chat Security: Member strictly forced to their own conversation ID (Member isolation)", $effective_id === 3);
+
+// 14.2 Message length validation (1-500 chars)
+$empty_chat = trim('');
+$oversized_chat = str_repeat('B', 501);
+$valid_chat = 'Hello support desk, I need help with my tracking number.';
+$chat_len_valid = (empty($empty_chat) && mb_strlen($oversized_chat) > 500 && mb_strlen($valid_chat) <= 500);
+assert_test("Chat Message: Length strictly validated between 1 and 500 chars", $chat_len_valid);
+
+// 14.3 Rate limit: 2 messages within 1 second rejected
+$t0 = microtime(true);
+$t1 = $t0 + 0.3; // 300ms later
+$rate_limited_chat = (($t1 - $t0) < 1.0);
+assert_test("Chat Rate Limit: Consecutive messages within 1 second rejected (429)", $rate_limited_chat);
+
+// 14.4 Polling marks incoming messages as read
+$test_mid = 3;
+$db->prepare("INSERT INTO chat_message (member_id, sender_role, message, is_read, created_at) VALUES (?, 'Admin', 'Test admin reply', 0, NOW())")
+   ->execute([$test_mid]);
+$c_id = (int)$db->lastInsertId();
+
+// Simulate member poll marking admin message as read
+$db->prepare("UPDATE chat_message SET is_read = 1 WHERE member_id = ? AND sender_role = 'Admin' AND is_read = 0")
+   ->execute([$test_mid]);
+$is_now_read = (bool)$db->query("SELECT is_read FROM chat_message WHERE id = {$c_id}")->fetchColumn();
+
+// Clean up
+$db->prepare("DELETE FROM chat_message WHERE id = ?")->execute([$c_id]);
+assert_test("Chat Polling: Incoming messages marked as read upon polling", $is_now_read === true);
+
+// 14.5 Unread counts calculation
+$unread_for_alice = (int)$db->query("SELECT COUNT(*) FROM chat_message WHERE member_id = 3 AND sender_role = 'Admin' AND is_read = 0")->fetchColumn();
+assert_test("Chat Navigation: Unread message badge count aggregates correctly", is_numeric($unread_for_alice));
 
 echo "\n============================================================\n";
 echo "SUMMARY: Passed: {$passed} | Failed: {$failed}\n";

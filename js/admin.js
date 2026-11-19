@@ -259,4 +259,27 @@ $(function() {
     if ($('#message').length > 0) {
         $('#char-count').text($('#message').val().length);
     }
+
+    // ========================================================================
+    // 4. VOUCHER FORM DISCOUNT TYPE TOGGLE (TASK D8)
+    // ========================================================================
+    $('#discount_type').on('change', function() {
+        var type = $(this).val();
+        if (type === 'percentage') {
+            $('#max_discount_group').slideDown(150);
+            $('#discount_unit_label').text('(%)');
+            $('#discount_value').attr('max', '100');
+        } else {
+            $('#max_discount_group').slideUp(150);
+            $('#discount_unit_label').text('(RM)');
+            $('#discount_value').removeAttr('max');
+        }
+    });
+
+    // Chat Member Jump Selector (TASK D11)
+    $('#chat-member-select').on('change', function() {
+        if ($(this).val()) {
+            $(this).closest('form').trigger('submit');
+        }
+    });
 });

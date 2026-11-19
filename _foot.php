@@ -72,5 +72,13 @@
         <!-- Product Photo Slider and Drag & Drop (No inline JS) -->
         <script src="<?= base_url('js/product.js') ?>"></script>
     <?php endif; ?>
+    <?php if (file_exists(__DIR__ . '/js/ajax.js')): ?>
+        <!-- AJAX Add to Cart, Cart Update, Wishlist, Search Suggestions (No inline JS) -->
+        <script src="<?= base_url('js/ajax.js') ?>"></script>
+    <?php endif; ?>
+    <?php if (file_exists(__DIR__ . '/js/chat.js')): ?>
+        <!-- Member <-> Admin Live Chat Polling (No inline JS) -->
+        <script src="<?= base_url('js/chat.js') ?>"></script>
+    <?php endif; ?>
 </body>
 </html>
