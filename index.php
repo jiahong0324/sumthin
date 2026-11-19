@@ -522,23 +522,27 @@ require_once __DIR__ . '/_head.php';
         <div class="product-grid mb-36">
             <?php foreach ($products as $p): ?>
                 <article class="product-card">
-                    <!-- Shopee Mall Badge -->
-                    <span class="shopee-card-badge-mall">Mall</span>
+                    <!-- Product Photo with Floating Wishlist Heart -->
+                    <div class="product-card-image-wrap">
+                        <a href="<?= base_url('product.php?id=' . (int)$p->id) ?>" class="product-card-link">
+                            <img src="<?= base_url('uploads/products/' . encode($p->photo_url)) ?>" 
+                                 alt="<?= encode($p->name) ?>" 
+                                 class="product-card-img" 
+                                 loading="lazy">
+                        </a>
+                        <form action="<?= base_url('wishlist.php') ?>" method="POST" class="card-wishlist-form">
+                            <?= csrf_field() ?>
+                            <input type="hidden" name="action" value="toggle">
+                            <input type="hidden" name="product_id" value="<?= (int)$p->id ?>">
+                            <button type="submit" class="btn-card-wishlist" title="Save to Wishlist" aria-label="Save to Wishlist">
+                                <span class="card-heart-icon">♡</span>
+                            </button>
+                        </form>
+                    </div>
 
-                    <!-- Shopee Discount Tag -->
-                    <span class="shopee-card-discount-tag">-20%</span>
-
-                    <!-- Product Photo Link -->
-                    <a href="<?= base_url('product.php?id=' . (int)$p->id) ?>" class="product-card-image-wrap product-card-link">
-                        <img src="<?= base_url('uploads/products/' . encode($p->photo_url)) ?>" 
-                             alt="<?= encode($p->name) ?>" 
-                             class="product-card-img" 
-                             loading="lazy">
-                    </a>
-
-                    <!-- Brand & Category Tag -->
+                    <!-- Category Tag -->
                     <div class="product-category-tag">
-                        <?= encode($p->brand_name ?? 'sumthin') ?> &bull; <?= encode($p->category_name) ?>
+                        <?= encode($p->category_name) ?>
                     </div>
 
                     <!-- Product Title -->
@@ -548,60 +552,33 @@ require_once __DIR__ . '/_head.php';
                         </a>
                     </h3>
 
-                    <!-- Shopee Review Stars & Sold Count -->
-                    <div class="shopee-card-rating">
-                        <span class="shopee-card-stars">★★★★★</span>
-                        <span><?= number_format((float)$p->avg_rating, 1) ?></span>
-                        <span class="shopee-card-sold"><?= (int)$p->units_sold ?> sold</span>
-                    </div>
-
-                    <!-- Free Shipping Pill -->
-                    <div>
-                        <span class="shopee-card-free-ship">🚚 Free Shipping</span>
+                    <!-- Rating & Sold Summary -->
+                    <div class="product-meta-row">
+                        <span class="product-rating-star">★</span>
+                        <span class="product-rating-val"><?= number_format((float)$p->avg_rating, 1) ?></span>
+                        <span class="product-meta-dot">&bull;</span>
+                        <span class="product-sold-count"><?= (int)$p->units_sold ?> sold</span>
                     </div>
 
                     <!-- Price & Actions Footer -->
                     <div class="product-footer">
-                        <div>
-                            <div class="shopee-card-price-row">
-                                <span class="product-price">RM <?= number_format((float)$p->price, 2) ?></span>
-                                <span class="shopee-card-orig-price">RM <?= number_format((float)$p->orig_price, 2) ?></span>
-                            </div>
-                            <div class="product-stock mt-2">
-                                <?php if ($p->stock > $p->low_stock_threshold): ?>
-                                    <span class="stock-status-in">In Stock (<?= (int)$p->stock ?>)</span>
-                                <?php elseif ($p->stock > 0): ?>
-                                    <span class="stock-status-low">Low Stock (<?= (int)$p->stock ?> left)</span>
-                                <?php else: ?>
-                                    <span class="stock-status-out">Out of Stock</span>
-                                <?php endif; ?>
-                            </div>
+                        <div class="product-price">
+                            RM <?= number_format((float)$p->price, 2) ?>
                         </div>
 
-                        <div class="product-card-actions">
-                            <form action="<?= base_url('wishlist.php') ?>" method="POST" class="d-inline">
+                        <?php if ($p->stock > 0): ?>
+                            <form action="<?= base_url('cart_action.php') ?>" method="POST" class="d-inline">
                                 <?= csrf_field() ?>
-                                <input type="hidden" name="action" value="toggle">
+                                <input type="hidden" name="action" value="add">
                                 <input type="hidden" name="product_id" value="<?= (int)$p->id ?>">
-                                <button type="submit" class="btn btn-outline-sm btn-card-action" title="Save to Wishlist" style="padding:6px 10px;">
-                                    <span class="card-heart-icon">♡</span>
+                                <input type="hidden" name="quantity" value="1">
+                                <button type="submit" class="btn btn-primary-sm btn-card-addcart">
+                                    + Add to Cart
                                 </button>
                             </form>
-                            <a href="<?= base_url('product.php?id=' . (int)$p->id) ?>" class="btn btn-outline-sm btn-card-action">
-                                Details
-                            </a>
-                            <?php if ($p->stock > 0): ?>
-                                <form action="<?= base_url('cart_action.php') ?>" method="POST" class="d-inline">
-                                    <?= csrf_field() ?>
-                                    <input type="hidden" name="action" value="add">
-                                    <input type="hidden" name="product_id" value="<?= (int)$p->id ?>">
-                                    <input type="hidden" name="quantity" value="1">
-                                    <button type="submit" class="btn btn-primary-sm btn-card-action" style="background:#ea580c; border-color:#ea580c;">
-                                        + Cart
-                                    </button>
-                                </form>
-                            <?php endif; ?>
-                        </div>
+                        <?php else: ?>
+                            <span class="stock-status-out">Out of Stock</span>
+                        <?php endif; ?>
                     </div>
                 </article>
             <?php endforeach; ?>
