@@ -65,7 +65,7 @@ if ($is_default_view) {
     try {
         $active_vouchers = $db->query("
             SELECT * FROM `voucher` 
-            WHERE `is_active` = 1 AND `expiry_date` >= CURDATE() AND `used_count` < `usage_limit`
+            WHERE `is_active` = 1 AND `expires_at` >= NOW() AND `used_count` < `usage_limit`
             ORDER BY `discount_value` DESC
             LIMIT 4
         ")->fetchAll();
