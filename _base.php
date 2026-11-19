@@ -284,40 +284,70 @@ function captcha_verify(): bool {
         return false;
     }
 
-    try {
-        $ch = curl_init('https://challenges.cloudflare.com/turnstile/v0/siteverify');
-        if (!$ch) {
-            return false;
-        }
+    $result_body = false;
 
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query([
-            'secret'   => $secret,
-            'response' => $response,
-            'remoteip' => $ip,
-        ]));
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 5);
-        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+    // 1. Primary: cURL (if extension is loaded)
+    if (function_exists('curl_init')) {
+        try {
+            $ch = curl_init('https://challenges.cloudflare.com/turnstile/v0/siteverify');
+            if ($ch) {
+                curl_setopt($ch, CURLOPT_POST, true);
+                curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query([
+                    'secret'   => $secret,
+                    'response' => $response,
+                    'remoteip' => $ip,
+                ]));
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+                curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+                curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
 
-        $result_body = curl_exec($ch);
-        $http_code   = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $curl_err    = curl_error($ch);
-        curl_close($ch);
+                $exec_res = curl_exec($ch);
+                $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                curl_close($ch);
 
-        if ($result_body === false || $http_code !== 200) {
-            if ($curl_err) {
-                error_log('Turnstile siteverify cURL error: ' . $curl_err);
+                if ($exec_res !== false && $http_code === 200) {
+                    $result_body = $exec_res;
+                }
             }
-            return false;
+        } catch (\Throwable $e) {
+            error_log('Turnstile siteverify cURL error: ' . $e->getMessage());
         }
+    }
 
-        $data = json_decode($result_body, true);
-        return is_array($data) && !empty($data['success']);
-    } catch (\Throwable $e) {
-        error_log('Turnstile siteverify exception: ' . $e->getMessage());
+    // 2. Fallback: PHP Stream Context POST (works when cURL extension is not loaded in web server)
+    if ($result_body === false) {
+        try {
+            $post_payload = http_build_query([
+                'secret'   => $secret,
+                'response' => $response,
+                'remoteip' => $ip,
+            ]);
+            $ctx = stream_context_create([
+                'http' => [
+                    'method'  => 'POST',
+                    'header'  => "Content-Type: application/x-www-form-urlencoded\r\nContent-Length: " . strlen($post_payload) . "\r\n",
+                    'content' => $post_payload,
+                    'timeout' => 5,
+                ],
+                'ssl' => [
+                    'verify_peer'      => false,
+                    'verify_peer_name' => false,
+                ]
+            ]);
+            $result_body = @file_get_contents('https://challenges.cloudflare.com/turnstile/v0/siteverify', false, $ctx);
+        } catch (\Throwable $e) {
+            error_log('Turnstile siteverify stream error: ' . $e->getMessage());
+        }
+    }
+
+    if ($result_body === false) {
         return false;
     }
+
+    $data = json_decode($result_body, true);
+    return is_array($data) && !empty($data['success']);
 }
 
 // ============================================================================
