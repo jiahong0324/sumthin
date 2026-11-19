@@ -39,12 +39,16 @@
 }
 
 html {
-    scroll-behavior: smooth;
     scroll-padding-top: 85px;
 }
 
+html.smooth-scroll {
+    scroll-behavior: smooth;
+}
+
 @media (prefers-reduced-motion: reduce) {
-    html {
+    html,
+    html.smooth-scroll {
         scroll-behavior: auto;
     }
 }

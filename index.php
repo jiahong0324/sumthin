@@ -460,9 +460,10 @@ require_once __DIR__ . '/_head.php';
         </form>
     </section>
 
-    <!-- Shopee-Style Sort Navigation Toolbar -->
-    <div class="shopee-sort-toolbar">
-        <span class="shopee-sort-label">Sort By:</span>
+    <!-- Shopee-Style Sort Navigation Toolbar & Dynamic Results Container -->
+    <div id="catalog-results">
+        <div class="shopee-sort-toolbar">
+            <span class="shopee-sort-label">Sort By:</span>
         <?php
         $base_sort_params = [];
         if ($q !== '') $base_sort_params['q'] = $q;
@@ -606,6 +607,7 @@ require_once __DIR__ . '/_head.php';
             </div>
         <?php endif; ?>
     <?php endif; ?>
+    </div> <!-- /#catalog-results -->
 </div>
 
 <?php require_once __DIR__ . '/_foot.php'; ?>

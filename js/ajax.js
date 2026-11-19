@@ -300,4 +300,146 @@ $(function() {
             }
         });
     });
+
+    // ------------------------------------------------------------------------
+    // 7. Instant AJAX Catalog Sorting, Filtering & Pagination
+    //    Prevents full page reloads, erratic jumps ("乱跳"), and maintains
+    //    smooth in-place updates.
+    // ------------------------------------------------------------------------
+    var catalogXhr = null;
+
+    function loadCatalog(url, shouldScroll) {
+        var $results = $('#catalog-results');
+        if (!$results.length) {
+            window.location.href = url;
+            return;
+        }
+
+        if (catalogXhr && catalogXhr.readyState !== 4) {
+            catalogXhr.abort();
+        }
+
+        // Subtle opacity transition during fetch
+        $results.css({
+            opacity: 0.45,
+            transition: 'opacity 0.12s ease'
+        });
+
+        catalogXhr = $.ajax({
+            url: url,
+            type: 'GET',
+            dataType: 'html',
+            success: function(html) {
+                var $doc = $('<div>').append($.parseHTML(html));
+                var $newResults = $doc.find('#catalog-results');
+                var $newCategories = $doc.find('.category-scroll-list');
+                var $newFilter = $doc.find('.catalog-filter-panel');
+
+                if ($newResults.length) {
+                    $results.html($newResults.html());
+                }
+
+                if ($newCategories.length) {
+                    $('.category-scroll-list').html($newCategories.html());
+                }
+
+                if ($newFilter.length) {
+                    $('.catalog-filter-panel').html($newFilter.html());
+                }
+
+                // Update browser URL without reloading
+                if (window.history && window.history.pushState) {
+                    window.history.pushState({ path: url }, '', url);
+                }
+
+                if (shouldScroll) {
+                    var headerHeight = $('.site-header').outerHeight() || 72;
+                    var targetTop = $('#catalog-results').offset().top - headerHeight - 16;
+                    $('html, body').stop().animate({ scrollTop: Math.max(0, targetTop) }, 250);
+                }
+            },
+            error: function(xhr, status) {
+                if (status !== 'abort') {
+                    window.location.href = url;
+                }
+            },
+            complete: function() {
+                $results.css({
+                    opacity: 1,
+                    transition: 'opacity 0.15s ease'
+                });
+            }
+        });
+    }
+
+    // A. Sort Buttons (Featured, Top Sales, Latest, Price: Low to High, Price: High to Low)
+    $(document).on('click', '.shopee-sort-btn', function(e) {
+        e.preventDefault();
+        var $btn = $(this);
+        if ($btn.hasClass('active')) return;
+
+        var targetUrl = $btn.attr('href');
+        if (!targetUrl) return;
+
+        // Instant active class update for fast UI feedback
+        $('.shopee-sort-btn').removeClass('active');
+        $btn.addClass('active');
+
+        // Load catalog via AJAX with ZERO scroll movement (no jumping/乱跳)
+        loadCatalog(targetUrl, false);
+    });
+
+    // B. Category Pills (All Products, Power Banks, Keyboards, etc.)
+    $(document).on('click', '.category-scroll-list a', function(e) {
+        var targetUrl = $(this).attr('href');
+        if (!targetUrl || targetUrl.indexOf('#catalog') === -1) return;
+
+        e.preventDefault();
+        loadCatalog(targetUrl, false);
+    });
+
+    // C. Pagination Links (Page 1, 2, 3, Prev, Next)
+    $(document).on('click', '.pagination-wrapper a', function(e) {
+        var targetUrl = $(this).attr('href');
+        if (!targetUrl) return;
+
+        e.preventDefault();
+        // Smoothly scroll to the top of catalog results so user sees newly paged items
+        loadCatalog(targetUrl, true);
+    });
+
+    // D. Multi-criteria Filter Form Submission
+    $(document).on('submit', '.catalog-filter-form', function(e) {
+        e.preventDefault();
+        var $form = $(this);
+        var action = $form.attr('action') || window.location.pathname;
+        var cleanAction = action.split('#')[0];
+        var queryString = $form.serialize();
+        var targetUrl = cleanAction + (queryString ? '?' + queryString : '') + '#catalog';
+        loadCatalog(targetUrl, false);
+    });
+
+    // E. Filter Reset Button & Empty State Reset Button
+    $(document).on('click', '.btn-filter-reset, .catalog-empty-card a', function(e) {
+        var targetUrl = $(this).attr('href');
+        if (!targetUrl) return;
+
+        e.preventDefault();
+        loadCatalog(targetUrl, false);
+    });
+
+    // F. Filter Sort Dropdown Change
+    $(document).on('change', '.catalog-filter-form select[name="sort"]', function() {
+        $(this).closest('form').trigger('submit');
+    });
+
+    // G. Browser Back / Forward History Navigation
+    $(window).on('popstate', function() {
+        var loc = window.location.href;
+        if (loc.indexOf('index.php') !== -1 || window.location.pathname === '/' || window.location.pathname.endsWith('/sumthin/') || window.location.pathname.endsWith('/sumthin')) {
+            if ($('#catalog-results').length) {
+                loadCatalog(loc, false);
+            }
+        }
+    });
 });

@@ -153,19 +153,11 @@ $(document).ready(function() {
         }
     });
 
-    // 13. Smooth scroll adjustment for hash on initial page load
-    if (window.location.hash) {
-        var $hashTarget = $(window.location.hash);
-        if ($hashTarget.length) {
-            setTimeout(function() {
-                var headerHeight = $('.site-header').outerHeight() || 72;
-                var targetTop = $hashTarget.offset().top - headerHeight - 16;
-                $('html, body').stop().animate({
-                    scrollTop: Math.max(0, targetTop)
-                }, 350);
-            }, 150);
-        }
-    }
+    // 13. Enable smooth scrolling after initial page render/anchor positioning
+    // to prevent unwanted jumping/bouncing animations on page load when a hash is present
+    setTimeout(function() {
+        $('html').addClass('smooth-scroll');
+    }, 100);
 
     // 14. Smooth Floating Back to Top Button
     var $backToTop = $('#btn-back-to-top');
